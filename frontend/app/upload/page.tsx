@@ -45,22 +45,25 @@ function UploadPageContent() {
   }
 
   return (
-    <main className="min-h-screen p-8 bg-white dark:bg-gray-900">
+    <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <Link href="/" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-            ← Back to Home
+          <Link href="/dashboard" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+            ← Back to Dashboard
           </Link>
         </div>
         
-        <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Upload Transcript</h1>
-        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Upload Transcript</h1>
+          <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">ΣΝ</span>
+        </div>
+        <p className="text-xl text-gray-700 dark:text-gray-200 mb-8">
           Upload your transcript PDF to automatically extract your courses
         </p>
 
-        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-8 shadow-xl">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-white dark:text-gray-300 mb-2">
               Select PDF File
             </label>
             <input
@@ -97,7 +100,17 @@ function UploadPageContent() {
 
           {uploadMutation.isError && (
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-400 text-sm">
-              Upload failed. Please try again.
+              <p className="font-medium mb-1">Upload failed</p>
+              <p className="text-xs">
+                {uploadMutation.error instanceof Error 
+                  ? uploadMutation.error.message 
+                  : (uploadMutation.error as any)?.response?.data?.detail || 'Please try again.'}
+              </p>
+              {(uploadMutation.error as any)?.response?.data?.detail?.includes('MinIO') && (
+                <p className="text-xs mt-2">
+                  💡 Make sure MinIO is running. Check the backend setup guide.
+                </p>
+              )}
             </div>
           )}
 
@@ -113,13 +126,13 @@ function UploadPageContent() {
 
         {/* Processing Status */}
         {transcriptStatus && (
-          <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-6 mb-8">
+          <div className="bg-[#d97706] dark:bg-gray-800 rounded-lg p-6 mb-8 shadow-xl">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Processing Status</h2>
             <div className="flex items-center gap-3 mb-2">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(transcriptStatus.processing_status)}`}>
                 {transcriptStatus.processing_status.charAt(0).toUpperCase() + transcriptStatus.processing_status.slice(1)}
               </span>
-              <span className="text-sm text-gray-600 dark:text-gray-300">
+              <span className="text-sm text-white dark:text-gray-300">
                 {transcriptStatus.file_name}
               </span>
             </div>
@@ -136,7 +149,7 @@ function UploadPageContent() {
 
         {/* Previous Transcripts */}
         {transcripts && transcripts.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Your Transcripts</h2>
             <div className="space-y-3">
               {transcripts.map((transcript) => (

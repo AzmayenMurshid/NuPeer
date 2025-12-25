@@ -17,6 +17,7 @@ class User(Base):
     last_name = Column(String(100), nullable=False)
     pledge_class = Column(String(50))
     graduation_year = Column(Integer)
+    major = Column(String(100), nullable=True)  # User's major field
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

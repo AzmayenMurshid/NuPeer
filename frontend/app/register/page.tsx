@@ -48,11 +48,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+    <main className="min-h-screen flex items-center justify-center p-8">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Join NuPeer</h1>
-          <p className="text-gray-600 dark:text-gray-300">Create your Sigma Nu brother profile</p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Join NuPeer</h1>
+            <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">ΣΝ</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-300">Sigma Nu Zeta Chi Chapter</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create your brother profile</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

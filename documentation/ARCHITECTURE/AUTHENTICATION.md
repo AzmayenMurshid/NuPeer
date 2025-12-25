@@ -145,3 +145,67 @@ This ensures:
 - Recommendations are based on authenticated user's needs
 - Data is secure and organized
 
+
+# Authentication Temporarily Disabled
+
+## Status: 🔓 Authentication is DISABLED for Development
+
+Authentication has been temporarily commented out so you can work on features without needing to log in.
+
+## What's Changed
+
+### Frontend
+- ✅ `ProtectedRoute` - Always allows access (no redirect to login)
+- ✅ `AuthContext` - Returns mock user (Dev User)
+- ✅ Homepage - Shows all features without requiring login
+- ✅ API client - Doesn't require auth tokens
+
+### Backend
+- ✅ `get_current_user` - Returns a mock dev user automatically
+- ✅ All endpoints - Work without authentication tokens
+- ✅ OAuth2 scheme - Made optional (auto_error=False)
+
+## Mock User
+
+The system will automatically use a dev user:
+- **Email**: dev@example.com
+- **Name**: Dev User
+- **Pledge Class**: Alpha
+- **Graduation Year**: 2025
+
+This user is automatically created in the database if it doesn't exist.
+
+## How to Re-enable Authentication
+
+When you're ready to re-enable authentication:
+
+1. **Frontend:**
+   - Uncomment code in `frontend/components/ProtectedRoute.tsx`
+   - Uncomment code in `frontend/contexts/AuthContext.tsx`
+   - Uncomment code in `frontend/app/page.tsx`
+   - Uncomment code in `frontend/lib/api.ts`
+
+2. **Backend:**
+   - In `backend/app/api/v1/auth.py`:
+     - Change `auto_error=False` back to default
+     - Uncomment the original `get_current_user` logic
+     - Remove the mock user code
+
+3. **Search for comments:**
+   - Look for `AUTHENTICATION TEMPORARILY DISABLED` comments
+   - Uncomment the original code blocks
+
+## Current Behavior
+
+- ✅ All pages are accessible without login
+- ✅ All API endpoints work without tokens
+- ✅ Features can be tested without authentication
+- ✅ Mock user is used for all operations
+
+## Notes
+
+- The dev user is created automatically in the database
+- All data operations use this mock user
+- Login/Register pages still exist but aren't required
+- When re-enabling auth, make sure to test the login flow
+

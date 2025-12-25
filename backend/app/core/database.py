@@ -6,11 +6,17 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
+# Force IPv4 connection by using 127.0.0.1 instead of localhost if needed
+database_url = settings.DATABASE_URL
+if "localhost" in database_url:
+    database_url = database_url.replace("localhost", "127.0.0.1")
+
 engine = create_engine(
-    settings.DATABASE_URL,
+    database_url,
     pool_pre_ping=True,
     pool_size=10,
-    max_overflow=20
+    max_overflow=20,
+    connect_args={"connect_timeout": 10}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

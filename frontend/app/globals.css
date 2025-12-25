@@ -4,7 +4,23 @@
 
 @layer base {
   body {
-    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-white transition-colors;
+    /* Light mode: White background, Dark mode: Matt grey-black */
+    @apply bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-50 transition-colors;
   }
+  
+  /* Bright setting - light gold-tinted background */
+  body.bright {
+    @apply bg-[#fef3c7];
+  }
+}
+
+/* Sigma Nu Theme Colors */
+:root {
+  --sigma-gold: #f59e0b;
+  --sigma-gold-dark: #d97706;
+  --sigma-gold-light: #fef3c7;
+  --sigma-white: #ffffff;
+  --sigma-black: #000000;
+  --sigma-matt-black: #1a1a1a;
 }
 

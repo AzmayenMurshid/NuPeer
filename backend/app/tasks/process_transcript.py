@@ -3,6 +3,7 @@ Celery task for processing transcripts
 """
 from celery import Celery
 from sqlalchemy import func
+from datetime import datetime, timedelta
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.storage import storage_service
@@ -18,10 +19,10 @@ celery_app = Celery(
 )
 
 
-@celery_app.task(name="process_transcript")
-def process_transcript_task(transcript_id: str, user_id: str):
+def _process_transcript_internal(transcript_id: str, user_id: str):
     """
-    Background task to process transcript PDF
+    Internal function to process transcript PDF
+    This can be called directly or via Celery task
     """
     db = SessionLocal()
     try:
@@ -29,6 +30,32 @@ def process_transcript_task(transcript_id: str, user_id: str):
         transcript = db.query(Transcript).filter(Transcript.id == uuid.UUID(transcript_id)).first()
         if not transcript:
             return {"status": "error", "message": "Transcript not found"}
+        
+        # Check if transcript has been pending for too long
+        if transcript.processing_status == "pending":
+            now = datetime.now(transcript.upload_date.tzinfo) if transcript.upload_date.tzinfo else datetime.now()
+            time_since_upload = now - transcript.upload_date
+            timeout_minutes = settings.TRANSCRIPT_PENDING_TIMEOUT_MINUTES
+            if time_since_upload > timedelta(minutes=timeout_minutes):
+                transcript.processing_status = "failed"
+                transcript.error_message = f"Transcript processing timed out after {timeout_minutes} minutes in pending status"
+                transcript.processed_at = db.query(func.now()).scalar()
+                db.commit()
+                return {"status": "error", "message": "Transcript processing timed out"}
+        
+        # Check if transcript has been processing for too long
+        if transcript.processing_status == "processing":
+            # If there's no processed_at, use upload_date as fallback
+            start_time = transcript.processed_at if transcript.processed_at else transcript.upload_date
+            now = datetime.now(start_time.tzinfo) if start_time.tzinfo else datetime.now()
+            time_since_start = now - start_time
+            timeout_minutes = settings.TRANSCRIPT_PROCESSING_TIMEOUT_MINUTES
+            if time_since_start > timedelta(minutes=timeout_minutes):
+                transcript.processing_status = "failed"
+                transcript.error_message = f"Transcript processing timed out after {timeout_minutes} minutes in processing status"
+                transcript.processed_at = db.query(func.now()).scalar()
+                db.commit()
+                return {"status": "error", "message": "Transcript processing timed out"}
         
         # Update status to processing
         transcript.processing_status = "processing"
@@ -46,29 +73,157 @@ def process_transcript_task(transcript_id: str, user_id: str):
         try:
             courses_data = pdf_processor.process_transcript(pdf_content)
             
+            if not courses_data:
+                transcript.processing_status = "failed"
+                transcript.error_message = "No courses found in transcript"
+                db.commit()
+                return {"status": "error", "message": "No courses found in transcript"}
+            
             # Save courses to database
+            courses_saved = 0
+            courses_skipped = 0
+            errors = []
+            
+            print(f"Processing {len(courses_data)} courses extracted from transcript...")
+            
             for course_data in courses_data:
-                course = Course(
-                    user_id=uuid.UUID(user_id),
-                    transcript_id=transcript.id,
-                    **course_data
-                )
-                db.add(course)
+                try:
+                    # Validate ALL required fields: course_code, course_name, attempted_credits, earned_credits, grade, points
+                    course_code = course_data.get('course_code')
+                    course_name = course_data.get('course_name')
+                    attempted_credits = course_data.get('attempted_credits')
+                    earned_credits = course_data.get('credit_hours')  # credit_hours is set to earned_credits in parser
+                    grade = course_data.get('grade')
+                    points = course_data.get('points')
+                    
+                    # Skip if any required field is missing
+                    if not course_code:
+                        errors.append(f"Course missing course_code, skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    if not course_name:
+                        errors.append(f"Course {course_code} missing course_name (description), skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    if attempted_credits is None:
+                        errors.append(f"Course {course_code} missing attempted_credits, skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    if earned_credits is None:
+                        errors.append(f"Course {course_code} missing earned_credits, skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    if not grade or not grade[0].isalpha():
+                        errors.append(f"Course {course_code} missing valid letter grade, skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    if points is None:
+                        errors.append(f"Course {course_code} missing points, skipping")
+                        courses_skipped += 1
+                        continue
+                    
+                    # Check if course already exists (handle duplicates)
+                    existing_course = db.query(Course).filter(
+                        Course.user_id == uuid.UUID(user_id),
+                        Course.course_code == course_code,
+                        Course.semester == course_data.get('semester'),
+                        Course.year == course_data.get('year')
+                    ).first()
+                    
+                    if existing_course:
+                        # Skip duplicate courses
+                        print(f"Skipping duplicate course: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                        courses_skipped += 1
+                        continue
+                    
+                    # Create new course
+                    # Truncate course_name if excessively long (though Text column has no hard limit)
+                    # We still truncate very long names to prevent issues and improve data quality
+                    if course_name and len(course_name) > 500:
+                        # Truncate at word boundary if possible
+                        truncated = course_name[:497]
+                        last_space = truncated.rfind(' ')
+                        if last_space > 400:  # Only use if we found a reasonable break point
+                            course_name = course_name[:last_space] + '...'
+                        else:
+                            course_name = truncated + '...'
+                    
+                    # Create Course object with all extracted data
+                    course = Course(
+                        user_id=uuid.UUID(user_id),
+                        transcript_id=transcript.id,
+                        course_code=course_code,
+                        course_name=course_name,
+                        grade=grade,
+                        grade_score=course_data.get('grade_score'),
+                        credit_hours=course_data.get('credit_hours'),
+                        points=points,  # Store points from transcript
+                        semester=course_data.get('semester'),
+                        year=course_data.get('year')
+                    )
+                    db.add(course)
+                    courses_saved += 1
+                    
+                    # Log successful course addition
+                    print(f"Added course: {course_code} - {course_name or 'No name'} | Grade: {grade} | Credits: {course_data.get('credit_hours')} | Semester: {course_data.get('semester')} | Year: {course_data.get('year')}")
+                    
+                except Exception as course_error:
+                    error_msg = f"Error saving course {course_data.get('course_code', 'unknown')}: {str(course_error)}"
+                    errors.append(error_msg)
+                    print(f"ERROR: {error_msg}")
+                    continue
+            
+            # Commit all courses at once
+            try:
+                db.commit()
+                print(f"Successfully committed {courses_saved} courses to database")
+            except Exception as commit_error:
+                db.rollback()
+                transcript.processing_status = "failed"
+                transcript.error_message = f"Database error: {str(commit_error)}"
+                db.commit()
+                print(f"ERROR: Failed to commit courses to database: {str(commit_error)}")
+                return {"status": "error", "message": f"Failed to save courses: {str(commit_error)}"}
             
             # Update transcript status
             transcript.processing_status = "completed"
             transcript.processed_at = db.query(func.now()).scalar()
+            if errors:
+                transcript.error_message = f"Some courses had errors: {'; '.join(errors)}"
             db.commit()
+            
+            # Log summary
+            print(f"\n=== Transcript Processing Summary ===")
+            print(f"Total courses found: {len(courses_data)}")
+            print(f"Courses saved to database: {courses_saved}")
+            print(f"Courses skipped (duplicates): {courses_skipped}")
+            if errors:
+                print(f"Errors encountered: {len(errors)}")
+                for error in errors[:5]:  # Show first 5 errors
+                    print(f"  - {error}")
+                if len(errors) > 5:
+                    print(f"  ... and {len(errors) - 5} more errors")
+            print(f"=====================================\n")
             
             return {
                 "status": "success",
                 "transcript_id": transcript_id,
-                "courses_count": len(courses_data)
+                "courses_found": len(courses_data),
+                "courses_saved": courses_saved,
+                "courses_skipped": courses_skipped,
+                "errors": errors if errors else None
             }
         
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
             transcript.processing_status = "failed"
-            transcript.error_message = str(e)
+            transcript.error_message = f"{str(e)}\n{error_trace}"
             db.commit()
             return {"status": "error", "message": str(e)}
     
@@ -76,4 +231,12 @@ def process_transcript_task(transcript_id: str, user_id: str):
         return {"status": "error", "message": str(e)}
     finally:
         db.close()
+
+
+@celery_app.task(name="process_transcript")
+def process_transcript_task(transcript_id: str, user_id: str):
+    """
+    Celery task wrapper for processing transcript PDF
+    """
+    return _process_transcript_internal(transcript_id, user_id)
 

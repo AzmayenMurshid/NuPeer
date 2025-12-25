@@ -4,24 +4,46 @@ Course endpoints
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from datetime import datetime
+from uuid import UUID
+from pydantic import BaseModel, field_validator
 from app.core.database import get_db
 from app.models.course import Course
 from app.models.user import User
 from app.api.v1.auth import get_current_user
-from pydantic import BaseModel
 
 router = APIRouter()
 
 
 class CourseResponse(BaseModel):
     id: str
+    user_id: str
+    transcript_id: str
     course_code: str
-    course_name: str = None
-    grade: str = None
-    grade_score: float = None
-    credit_hours: float = None
-    semester: str = None
-    year: int = None
+    course_name: Optional[str] = None
+    grade: Optional[str] = None
+    grade_score: Optional[float] = None
+    credit_hours: Optional[float] = None
+    points: Optional[float] = None  # GPA points from transcript
+    semester: Optional[str] = None
+    year: Optional[int] = None
+    created_at: str
+    
+    @field_validator('id', 'user_id', 'transcript_id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """Convert UUID to string if needed"""
+        if v is not None:
+            return str(v)
+        return v
+    
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def convert_datetime_to_str(cls, v):
+        """Convert datetime to ISO format string"""
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
     
     class Config:
         from_attributes = True

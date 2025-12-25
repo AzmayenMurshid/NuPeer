@@ -1,0 +1,15 @@
+{
+  "include": [
+    "transcript_parser.py"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules"
+  ],
+  "extraPaths": [
+    "../backend"
+  ],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic"
+}
+

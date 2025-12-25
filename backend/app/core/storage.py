@@ -10,41 +10,97 @@ from typing import Optional
 
 class StorageService:
     def __init__(self):
-        self.s3_client = boto3.client(
-            's3',
-            endpoint_url=settings.S3_ENDPOINT,
-            aws_access_key_id=settings.S3_ACCESS_KEY,
-            aws_secret_access_key=settings.S3_SECRET_KEY,
-            use_ssl=settings.S3_USE_SSL
-        )
+        self.s3_client = None
         self.bucket_name = settings.S3_BUCKET_NAME
-        self._ensure_bucket_exists()
+        self._initialize_client()
+    
+    def _initialize_client(self):
+        """Initialize S3 client"""
+        try:
+            self.s3_client = boto3.client(
+                's3',
+                endpoint_url=settings.S3_ENDPOINT,
+                aws_access_key_id=settings.S3_ACCESS_KEY,
+                aws_secret_access_key=settings.S3_SECRET_KEY,
+                use_ssl=settings.S3_USE_SSL
+            )
+            self._ensure_bucket_exists()
+        except Exception as e:
+            print(f"Warning: Could not initialize storage service: {e}")
+            print(f"MinIO/S3 may not be running at {settings.S3_ENDPOINT}")
+            self.s3_client = None
+    
+    def _reinitialize_if_needed(self):
+        """Reinitialize client if it's None (lazy initialization)"""
+        if self.s3_client is None:
+            self._initialize_client()
     
     def _ensure_bucket_exists(self):
         """Create bucket if it doesn't exist"""
+        if not self.s3_client:
+            return
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
         except ClientError:
-            self.s3_client.create_bucket(Bucket=self.bucket_name)
+            try:
+                self.s3_client.create_bucket(Bucket=self.bucket_name)
+            except ClientError as e:
+                print(f"Warning: Could not create bucket: {e}")
+    
+    def _check_connection(self):
+        """Check if storage service is available"""
+        if not self.s3_client:
+            raise ConnectionError(
+                f"Storage service not available. Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+            )
     
     def upload_file(self, file_content: bytes, user_id: str, filename: str) -> str:
         """
         Upload file to object storage
         Returns: file path in storage
         """
+        # Try to reinitialize if client is None
+        self._reinitialize_if_needed()
+        self._check_connection()
+        
         file_key = f"transcripts/{user_id}/{uuid.uuid4()}/{filename}"
         
-        self.s3_client.put_object(
-            Bucket=self.bucket_name,
-            Key=file_key,
-            Body=file_content,
-            ContentType="application/pdf"
-        )
-        
-        return file_key
+        try:
+            self.s3_client.put_object(
+                Bucket=self.bucket_name,
+                Key=file_key,
+                Body=file_content,
+                ContentType="application/pdf"
+            )
+            return file_key
+        except ClientError as e:
+            # Try to reinitialize and retry once
+            self.s3_client = None
+            self._reinitialize_if_needed()
+            if self.s3_client is None:
+                raise ConnectionError(
+                    f"Storage service not available. Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+                )
+            try:
+                self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=file_key,
+                    Body=file_content,
+                    ContentType="application/pdf"
+                )
+                return file_key
+            except ClientError as retry_error:
+                raise ConnectionError(
+                    f"Failed to upload file to storage: {str(retry_error)}. "
+                    f"Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+                )
     
     def download_file(self, file_key: str) -> Optional[bytes]:
         """Download file from object storage"""
+        if self.s3_client is None:
+            self._reinitialize_if_needed()
+        if not self.s3_client:
+            return None
         try:
             response = self.s3_client.get_object(Bucket=self.bucket_name, Key=file_key)
             return response['Body'].read()

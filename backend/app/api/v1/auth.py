@@ -4,7 +4,9 @@ Authentication endpoints
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from sqlalchemy import func
+from pydantic import BaseModel, EmailStr, field_validator
+from typing import Optional
 from datetime import timedelta
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
@@ -14,6 +16,34 @@ from app.models.user import User
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
+# Bcrypt has a hard limit of 72 bytes for passwords
+MAX_PASSWORD_BYTES = 72
+MIN_PASSWORD_LENGTH = 6
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        """Validate password length: minimum 6 characters, maximum 72 bytes"""
+        # Check minimum length
+        if len(v) < MIN_PASSWORD_LENGTH:
+            raise ValueError(
+                f"Password must be at least {MIN_PASSWORD_LENGTH} characters long."
+            )
+        
+        # Check maximum bytes (bcrypt limitation)
+        password_bytes = v.encode('utf-8')
+        if len(password_bytes) > MAX_PASSWORD_BYTES:
+            raise ValueError(
+                f"Password cannot exceed {MAX_PASSWORD_BYTES} bytes. "
+                "Please use a shorter password."
+            )
+        return v
+
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -22,6 +52,25 @@ class UserRegister(BaseModel):
     last_name: str
     pledge_class: str = None
     graduation_year: int = None
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_length(cls, v: str) -> str:
+        """Validate password length: minimum 6 characters, maximum 72 bytes"""
+        # Check minimum length
+        if len(v) < MIN_PASSWORD_LENGTH:
+            raise ValueError(
+                f"Password must be at least {MIN_PASSWORD_LENGTH} characters long."
+            )
+        
+        # Check maximum bytes (bcrypt limitation)
+        password_bytes = v.encode('utf-8')
+        if len(password_bytes) > MAX_PASSWORD_BYTES:
+            raise ValueError(
+                f"Password cannot exceed {MAX_PASSWORD_BYTES} bytes. "
+                "Please use a shorter password."
+            )
+        return v
 
 
 class UserResponse(BaseModel):
@@ -29,11 +78,24 @@ class UserResponse(BaseModel):
     email: str
     first_name: str
     last_name: str
-    pledge_class: str = None
-    graduation_year: int = None
+    pledge_class: Optional[str] = None
+    graduation_year: Optional[int] = None
+    major: Optional[str] = None
+    
+    @field_validator('id', mode='before')
+    @classmethod
+    def convert_uuid_to_str(cls, v):
+        """Convert UUID to string if needed"""
+        if v is not None:
+            return str(v)
+        return v
     
     class Config:
         from_attributes = True
+
+
+class MajorUpdate(BaseModel):
+    major: str = None
 
 
 class Token(BaseModel):
@@ -70,8 +132,8 @@ async def get_current_user(
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user"""
-    # Check if user exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    # Check if user exists (case-insensitive email check)
+    existing_user = db.query(User).filter(func.lower(User.email) == func.lower(user_data.email)).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -102,7 +164,8 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login and get access token"""
-    user = db.query(User).filter(User.email == form_data.username).first()
+    # Case-insensitive email lookup
+    user = db.query(User).filter(func.lower(User.email) == func.lower(form_data.username)).first()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -123,5 +186,47 @@ async def login(
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
+    return current_user
+
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change user password"""
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect"
+        )
+    
+    # Check if new password is different from current password
+    if verify_password(password_data.new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+    
+    # Update password
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    db.commit()
+    
+    return {"message": "Password changed successfully"}
+
+
+@router.put("/update-major", response_model=UserResponse, status_code=status.HTTP_200_OK)
+async def update_major(
+    major_data: MajorUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update user's major"""
+    current_user.major = major_data.major
+    db.commit()
+    db.refresh(current_user)
+    
     return current_user
 

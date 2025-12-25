@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database
-    DATABASE_URL: str = "postgresql://nupeer:nupeer@localhost:5432/nupeer"
+    DATABASE_URL: str = "postgresql://nupeer:nupeer@localhost:5433/nupeer"  # Port 5433 to avoid local PostgreSQL conflict
     
     # JWT
     SECRET_KEY: str = "your-secret-key-change-in-production"
@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     # File Upload
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = [".pdf"]
+    
+    # Transcript Processing
+    TRANSCRIPT_PROCESSING_TIMEOUT_MINUTES: int = 30  # Timeout for processing (30 minutes)
+    TRANSCRIPT_PENDING_TIMEOUT_MINUTES: int = 60  # Timeout for pending status (60 minutes)
     
     model_config = SettingsConfigDict(
         env_file=".env",

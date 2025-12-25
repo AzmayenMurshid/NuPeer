@@ -3,7 +3,7 @@ NuPeer - Main FastAPI Application
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, transcripts, courses, help_requests, recommendations
+from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics
 from app.core.config import settings
 
 app = FastAPI(
@@ -29,6 +29,7 @@ app.include_router(transcripts.router, prefix="/api/v1/transcripts", tags=["Tran
 app.include_router(courses.router, prefix="/api/v1/courses", tags=["Courses"])
 app.include_router(help_requests.router, prefix="/api/v1/help-requests", tags=["Help Requests"])
 app.include_router(recommendations.router, prefix="/api/v1/recommendations", tags=["Recommendations"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 
 @app.get("/")

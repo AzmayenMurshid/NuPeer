@@ -9,6 +9,7 @@ export interface User {
   last_name: string
   pledge_class: string | null
   graduation_year: number | null
+  major: string | null
 }
 
 export interface LoginCredentials {
@@ -23,6 +24,11 @@ export interface RegisterData {
   last_name: string
   pledge_class?: string
   graduation_year?: number
+}
+
+export interface PasswordChangeData {
+  current_password: string
+  new_password: string
 }
 
 export interface AuthResponse {
@@ -50,7 +56,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       localStorage.setItem('access_token', data.access_token)
       queryClient.invalidateQueries({ queryKey: ['user'] })
-      router.push('/')
+      router.push('/dashboard')
     },
   })
 }
@@ -107,6 +113,70 @@ export const useCurrentUser = () => {
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+export const useChangePassword = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: PasswordChangeData) => {
+      try {
+        const response = await api.post<{ message: string }>('/auth/change-password', data)
+        return response.data
+      } catch (error: any) {
+        // Handle different error types
+        if (!error.response) {
+          // Network error - backend not reachable
+          throw new Error('Cannot connect to server. Please make sure the backend is running.')
+        }
+        
+        // Get error message from backend
+        const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           error.message || 
+                           'Password change failed'
+        
+        throw new Error(errorMessage)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+    },
+  })
+}
+
+export interface MajorUpdateData {
+  major: string | null
+}
+
+export const useUpdateMajor = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data: MajorUpdateData) => {
+      try {
+        const response = await api.put<User>('/auth/update-major', data)
+        return response.data
+      } catch (error: any) {
+        // Handle different error types
+        if (!error.response) {
+          // Network error - backend not reachable
+          throw new Error('Cannot connect to server. Please make sure the backend is running.')
+        }
+        
+        // Get error message from backend
+        const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           error.message || 
+                           'Major update failed'
+        
+        throw new Error(errorMessage)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+    },
   })
 }
 

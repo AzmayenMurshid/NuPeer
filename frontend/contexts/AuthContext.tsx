@@ -15,7 +15,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, isLoading } = useCurrentUser()
   const logout = useLogout()
-
   const isAuthenticated = !!user && !isLoading
 
   return (
