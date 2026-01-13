@@ -14,7 +14,7 @@ class Course(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    transcript_id = Column(UUID(as_uuid=True), ForeignKey("transcripts.id", ondelete="CASCADE"), nullable=False)
+    transcript_id = Column(UUID(as_uuid=True), ForeignKey("transcripts.id", ondelete="CASCADE"), nullable=True)  # Nullable for manually added courses
     course_code = Column(String(20), nullable=False, index=True)  # e.g., "CS 101"
     course_name = Column(Text)  # Changed from String(255) to Text to handle variable-length course names
     grade = Column(String(10))  # e.g., "A", "B+", "3.5"

@@ -2,75 +2,64 @@
 
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export default function LandingPage() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
-      {/* Animated Background with Greek Letters */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        {/* Sigma Letter (Σ) */}
-        <div className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="relative">
-            <div className="text-[20rem] md:text-[30rem] font-bold text-[#d97706]/20 select-none animate-float-slow">
-              Σ
-            </div>
-            <div className="absolute inset-0 text-[20rem] md:text-[30rem] font-bold text-[#d97706]/30 select-none animate-pulse-slow blur-sm">
-              Σ
-            </div>
+    <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white relative overflow-hidden">
+      {/* Theme Toggle - Top Right */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
+      {/* Minimal background - Robinhood style */}
+      <div className="absolute inset-0 z-0 overflow-hidden opacity-10 dark:opacity-5">
+        {/* Subtle pattern */}
+        <div className="absolute top-[calc(25%-350px)] left-[calc(25%-250px)]">
+          <div className="text-[15rem] md:text-[20rem] font-bold text-primary-500 select-none">
+            Σ
           </div>
         </div>
-
-        {/* Nu Letter (Ν) */}
-        <div className="absolute top-3/4 right-1/4 transform translate-x-1/2 translate-y-1/2">
-          <div className="relative">
-            <div className="text-[20rem] md:text-[30rem] font-bold text-[#f59e0b]/20 select-none animate-float-slow-delayed">
-              Ν
-            </div>
-            <div className="absolute inset-0 text-[20rem] md:text-[30rem] font-bold text-[#f59e0b]/30 select-none animate-pulse-slow-delayed blur-sm">
-              Ν
-            </div>
+        <div className="absolute top-[calc(25%-350px)] left-[calc(25%-250px+18rem-170px)] md:left-[calc(25%-250px+24rem-170px)]">
+          <div className="text-[15rem] md:text-[20rem] font-bold text-primary-500 select-none">
+            Ν
           </div>
         </div>
-
-        {/* Floating particles */}
-        <div className="absolute inset-0">
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-[#d97706]/30 rounded-full animate-float"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${5 + Math.random() * 5}s`,
-              }}
-            />
-          ))}
+        <div className="absolute top-[calc(25%-350px)] right-[calc(25%-250px+18rem-170px)] md:right-[calc(25%-250px+24rem-170px)]">
+          <div className="text-[15rem] md:text-[20rem] font-bold text-primary-500 select-none">
+            Ζ
+          </div>
+        </div>
+        <div className="absolute top-[calc(25%-350px)] right-[calc(25%-250px)]">
+          <div className="text-[15rem] md:text-[20rem] font-bold text-primary-500 select-none">
+            Χ
+          </div>
         </div>
       </div>
 
       {/* Content Overlay */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Main Heading with 3D effect */}
-          <div className="mb-6 relative">
-            <h1 className="text-7xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-[#d97706] via-[#f59e0b] to-[#d97706] bg-clip-text text-transparent drop-shadow-2xl animate-gradient-x bg-[length:200%_200%]">
+          {/* Main Heading - Robinhood style clean */}
+          <div className="mb-8">
+            <h1 className="text-6xl md:text-7xl font-bold mb-4 text-gray-900 dark:text-white">
               NuPeer
             </h1>
-            {/* 3D shadow effect */}
-            <div className="absolute inset-0 text-7xl md:text-8xl font-bold bg-gradient-to-r from-[#d97706] via-[#f59e0b] to-[#d97706] bg-clip-text text-transparent blur-xl opacity-50 -z-10 transform translate-y-2">
-              NuPeer
+            <div className="flex items-center gap-2 justify-center mb-6">
+              <span className="text-sm font-semibold text-primary-500">ΣΝ</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Sigma Nu Zeta Chi</span>
             </div>
           </div>
           
           {/* Subtitle */}
-          <p className="text-2xl md:text-3xl mb-4 text-gray-200 font-light">
-            Connect with <span className="font-semibold text-[#d97706]">Sigma Nu</span> brothers
+          <p className="text-xl md:text-2xl mb-2 text-gray-700 dark:text-gray-300 font-medium">
+            Connect with brothers who can help
           </p>
-          <p className="text-xl md:text-2xl mb-12 text-gray-300">
-            Get academic help from brothers who excelled in your classes
+          <p className="text-lg md:text-xl mb-12 text-gray-600 dark:text-gray-400">
+            Your academic success, powered by brotherhood
           </p>
 
           {/* CTA Buttons */}
@@ -78,23 +67,21 @@ export default function LandingPage() {
             {isAuthenticated ? (
               <Link
                 href="/dashboard"
-                className="px-8 py-4 bg-[#d97706] hover:bg-[#f59e0b] text-white rounded-lg font-semibold text-lg shadow-2xl hover:shadow-[#d97706]/50 transition-all transform hover:scale-105 duration-300 relative overflow-hidden group"
+                className="px-8 py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold text-lg transition-all active:scale-95"
               >
-                <span className="relative z-10">Go to Dashboard</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#f59e0b] to-[#d97706] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                Go to Dashboard
               </Link>
             ) : (
               <>
                 <Link
                   href="/register"
-                  className="px-8 py-4 bg-[#d97706] hover:bg-[#f59e0b] text-white rounded-lg font-semibold text-lg shadow-2xl hover:shadow-[#d97706]/50 transition-all transform hover:scale-105 duration-300 relative overflow-hidden group"
+                  className="px-8 py-4 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-semibold text-lg transition-all active:scale-95"
                 >
-                  <span className="relative z-10">Get Started</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#f59e0b] to-[#d97706] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  Get Started
                 </Link>
                 <Link
                   href="/login"
-                  className="px-8 py-4 bg-transparent border-2 border-[#d97706] hover:bg-[#d97706]/10 text-white rounded-lg font-semibold text-lg shadow-xl hover:shadow-[#d97706]/30 transition-all transform hover:scale-105 duration-300"
+                  className="px-8 py-4 bg-transparent border-2 border-primary-500 hover:bg-primary-500/10 text-gray-900 dark:text-white rounded-lg font-semibold text-lg transition-all active:scale-95"
                 >
                   Sign In
                 </Link>
@@ -102,83 +89,110 @@ export default function LandingPage() {
             )}
           </div>
 
-          {/* Features */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all transform hover:scale-105 duration-300">
-              <div className="text-4xl mb-4 animate-bounce-slow">📚</div>
-              <h3 className="text-xl font-semibold mb-2">Upload Transcript</h3>
-              <p className="text-gray-300">Automatically extract your courses and grades from your transcript</p>
+          {/* Features - Robinhood style cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-16">
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">📚</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Upload Transcript</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Automatically extract your courses and grades from PDF transcripts</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all transform hover:scale-105 duration-300">
-              <div className="text-4xl mb-4 animate-bounce-slow-delayed">🤝</div>
-              <h3 className="text-xl font-semibold mb-2">Find Help</h3>
-              <p className="text-gray-300">Connect with brothers who excelled in the classes you need help with</p>
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">🤝</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Find Help</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Connect with brothers who excelled in your classes</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all transform hover:scale-105 duration-300">
-              <div className="text-4xl mb-4 animate-bounce-slow-delayed-2">📊</div>
-              <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
-              <p className="text-gray-300">Monitor your academic performance with detailed analytics</p>
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Advanced Analytics</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Detailed graphs, GPA trends, and performance insights</p>
+            </div>
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">👥</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Study Groups</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Find brothers taking the same courses for group study</p>
+            </div>
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">🎓</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Brothers in Major</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Connect with brothers who share your academic major</p>
+            </div>
+            <div className="card card-hover p-6">
+              <div className="text-4xl mb-4">📝</div>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Track Current Courses</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage and monitor courses you're currently taking</p>
             </div>
           </div>
 
-          {/* Transcript Upload Appeal Section */}
-          <div className="mt-20 bg-gradient-to-r from-[#d97706]/20 via-[#f59e0b]/20 to-[#d97706]/20 backdrop-blur-sm rounded-2xl p-8 md:p-12 border-2 border-[#d97706]/30 shadow-2xl">
+          {/* Transcript Upload Appeal Section - Robinhood style */}
+          <div className="mt-20 card p-8 md:p-12 border-primary-500/30">
             <div className="text-center max-w-3xl mx-auto">
               <div className="text-6xl mb-6 animate-pulse">📄</div>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
                 Start Your Academic Journey
               </h2>
-              <p className="text-xl md:text-2xl text-gray-200 mb-6 leading-relaxed">
+              <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
                 Upload your transcript to unlock powerful insights and connect with brothers who can help you succeed
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 text-left">
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">✨</div>
                   <div>
-                    <h4 className="font-semibold text-white mb-1">Instant Analysis</h4>
-                    <p className="text-gray-300 text-sm">Get your GPA, credit progress, and course breakdown in seconds</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Instant Analysis</h4>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">Get your GPA, credit progress, and course breakdown in seconds</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">🎯</div>
                   <div>
-                    <h4 className="font-semibold text-white mb-1">Smart Matching</h4>
-                    <p className="text-gray-300 text-sm">Find brothers who excelled in the exact courses you're taking</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Smart Matching</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Find brothers who excelled in the exact courses you're taking</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">👥</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Study Groups</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Find brothers taking the same current courses for group study sessions</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">📈</div>
                   <div>
-                    <h4 className="font-semibold text-white mb-1">Track Progress</h4>
-                    <p className="text-gray-300 text-sm">Monitor your academic performance with detailed analytics and trends</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Advanced Analytics</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Detailed graphs, GPA trends, grade distribution, and performance insights</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">🎓</div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Major Connections</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Connect with brothers in your major through swipeable carousels</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <div className="text-2xl">🔒</div>
                   <div>
-                    <h4 className="font-semibold text-white mb-1">Secure & Private</h4>
-                    <p className="text-gray-300 text-sm">Your transcript is processed securely and only visible to you</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Secure & Private</h4>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Your transcript is processed securely and only visible to you</p>
                   </div>
                 </div>
               </div>
               {isAuthenticated ? (
                 <Link
                   href="/upload"
-                  className="inline-block px-10 py-5 bg-[#d97706] hover:bg-[#f59e0b] text-white rounded-lg font-bold text-xl shadow-2xl hover:shadow-[#d97706]/50 transition-all transform hover:scale-110 duration-300 relative overflow-hidden group"
+                  className="inline-block px-10 py-5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold text-xl transition-all active:scale-95"
                 >
-                  <span className="relative z-10">Upload Your Transcript Now</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#f59e0b] to-[#d97706] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  Upload Your Transcript Now
                 </Link>
               ) : (
                 <Link
                   href="/register"
-                  className="inline-block px-10 py-5 bg-[#d97706] hover:bg-[#f59e0b] text-white rounded-lg font-bold text-xl shadow-2xl hover:shadow-[#d97706]/50 transition-all transform hover:scale-110 duration-300 relative overflow-hidden group"
+                  className="inline-block px-10 py-5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold text-xl transition-all active:scale-95"
                 >
-                  <span className="relative z-10">Get Started - Upload Your Transcript</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#f59e0b] to-[#d97706] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  Get Started - Upload Your Transcript
                 </Link>
               )}
-              <p className="text-gray-400 text-sm mt-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
                 Simply upload your PDF transcript and we'll handle the rest
               </p>
             </div>

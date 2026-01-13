@@ -279,10 +279,11 @@ async def get_academic_trends(
             
             points_semester_data[period]["count"] += 1
     
-    # Build points trend - sort chronologically by year and semester
+    # Build points trend - sort by academic calendar order (Fall, Spring, Summer)
     def sort_period_key_for_points(item: tuple) -> tuple:
-        """Sort key for (period, data) tuples - sorts by period chronologically"""
+        """Sort key for (period, data) tuples - sorts by academic year order: Fall, Spring, Summer"""
         period_str, _ = item
+        # Academic calendar order: Fall starts the year, then Spring, then Summer
         semester_order = {'Fall': 0, 'Spring': 1, 'Summer': 2, 'Winter': 3, 'Unknown': 99}
         parts = period_str.split()
         if len(parts) >= 2:
@@ -290,7 +291,16 @@ async def get_academic_trends(
             try:
                 year = int(parts[1])
                 semester_priority = semester_order.get(semester, 99)
-                return (year, semester_priority)
+                # For academic year: Fall 2023 starts academic year 2023-2024
+                # Spring 2024 and Summer 2024 are part of the same academic year
+                # So we use the year of Fall as the academic year base
+                if semester == 'Spring' or semester == 'Summer':
+                    # Spring and Summer belong to the academic year that started in the previous Fall
+                    academic_year = year - 1
+                else:
+                    # Fall starts the academic year
+                    academic_year = year
+                return (academic_year, semester_priority)
             except (ValueError, IndexError):
                 pass
         return (0, 99)

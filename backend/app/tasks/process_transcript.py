@@ -127,7 +127,8 @@ def _process_transcript_internal(transcript_id: str, user_id: str):
                         courses_skipped += 1
                         continue
                     
-                    # Check if course already exists (handle duplicates)
+                    # Check if course already exists (handle duplicates and update current courses)
+                    # First, try exact match (course_code, semester, year)
                     existing_course = db.query(Course).filter(
                         Course.user_id == uuid.UUID(user_id),
                         Course.course_code == course_code,
@@ -135,11 +136,34 @@ def _process_transcript_internal(transcript_id: str, user_id: str):
                         Course.year == course_data.get('year')
                     ).first()
                     
+                    # If no exact match, try to find a "current" course (transcript_id is None) with matching course_code
+                    # This handles cases where semester/year might not match exactly
+                    # However, we should NOT automatically update manually-added courses to avoid overwriting user data
+                    # Instead, we'll create a new course entry for the transcript version
+                    if not existing_course:
+                        existing_current_course = db.query(Course).filter(
+                            Course.user_id == uuid.UUID(user_id),
+                            Course.course_code == course_code,
+                            Course.transcript_id.is_(None)  # Only match "current" courses
+                        ).first()
+                        if existing_current_course:
+                            # Found a manually-added course with the same code
+                            # Don't overwrite it - create a separate entry for the transcript version
+                            # This preserves the user's manually entered data
+                            print(f"Found manually-added course {course_code}, creating separate transcript entry to preserve user data")
+                            # Continue to create new course below
+                    
                     if existing_course:
-                        # Skip duplicate courses
-                        print(f"Skipping duplicate course: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
-                        courses_skipped += 1
-                        continue
+                        # If existing course has a transcript_id, it's a duplicate from another transcript - skip it
+                        if existing_course.transcript_id is not None:
+                            print(f"Skipping duplicate course: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                            courses_skipped += 1
+                            continue
+                        # If existing course has no transcript_id, it's a manually-added "current" course
+                        # We should NOT overwrite it - instead, create a new entry for the transcript version
+                        # This preserves the user's manually entered semester/year data
+                        print(f"Found manually-added course {course_code}, creating separate transcript entry to preserve user data")
+                        # Continue to create new course below
                     
                     # Create new course
                     # Truncate course_name if excessively long (though Text column has no hard limit)

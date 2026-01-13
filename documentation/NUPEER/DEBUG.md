@@ -1920,6 +1920,139 @@ except Exception as celery_error:
 
 This warning is expected when Redis is not running. The system automatically falls back to synchronous processing, so transcripts are still processed successfully. To eliminate the warning, start Redis or ensure it's accessible.
 
+---
 
+## **500 Internal Server Error: Connected Brothers Endpoint After Help Request Deletion**
+
+### **Date:** 2025-01-XX
+
+### **Error Description:**
+When deleting a help request, the `GET /api/v1/recommendations/connected-brothers` endpoint returns a 500 Internal Server Error. This occurs when the frontend tries to refresh the connected brothers list after a help request is deleted.
+
+### **Symptoms:**
+- 500 Internal Server Error when calling `/api/v1/recommendations/connected-brothers`
+- Error occurs after successfully deleting a help request
+- Frontend may show an error or fail to update the connected brothers list
+- Error message: `Failed to get connected brothers: ...`
+
+### **Root Cause:**
+The `get_connected_brothers` endpoint has several issues:
+1. **Missing relationship loading**: The `course.user` relationship might not be loaded, causing `AttributeError` when accessing `helper.id`
+2. **No error handling**: The endpoint doesn't catch exceptions, causing 500 errors to propagate
+3. **Datetime conversion issues**: When converting `created_at` to ISO format, it might already be a string or None
+4. **No null checks**: The code doesn't check if `course.user` is None before accessing its attributes
+
+### **Error Location:**
+- **File:** `backend/app/api/v1/recommendations.py`
+- **Function:** `get_connected_brothers()`
+- **Lines:** 266-362 (before fix)
+
+### **Code Before Fix:**
+```python
+@router.get("/connected-brothers", response_model=List[ConnectedBrotherResponse])
+async def get_connected_brothers(...):
+    help_requests = db.query(HelpRequest).filter(...).all()
+    
+    for help_request in help_requests:
+        matching_courses = db.query(Course).join(User).filter(...).all()
+        
+        for course in matching_courses:
+            helper = course.user  # ❌ May be None if relationship not loaded
+            helper_id = str(helper.id)  # ❌ AttributeError if helper is None
+            # ...
+```
+
+### **Problem:**
+1. **Lazy loading issue**: `course.user` might not be loaded, causing `None` access
+2. **No null checks**: Code assumes `helper` is always available
+3. **No error handling**: Exceptions cause 500 errors instead of graceful handling
+4. **Datetime conversion**: Assumes `created_at` is always a datetime object
+
+### **Solution:**
+Implemented multiple fixes:
+1. **Eager loading**: Use `joinedload(Course.user)` to ensure user relationship is loaded
+2. **Null checks**: Check if `helper` is None before accessing its attributes
+3. **Error handling**: Wrap the entire function in try/except with proper HTTPException
+4. **Datetime safety**: Check if datetime is already a string before calling `.isoformat()`
+
+### **Code After Fix:**
+```python
+from sqlalchemy.orm import Session, joinedload  # ✅ Added joinedload
+
+@router.get("/connected-brothers", response_model=List[ConnectedBrotherResponse])
+async def get_connected_brothers(...):
+    try:  # ✅ Added error handling
+        help_requests = db.query(HelpRequest).filter(...).all()
+        
+        for help_request in help_requests:
+            # ✅ Eager load user relationship
+            matching_courses = db.query(Course).options(
+                joinedload(Course.user)
+            ).join(User).filter(...).all()
+            
+            for course in matching_courses:
+                helper = course.user
+                if helper is None:  # ✅ Check for None
+                    continue
+                
+                helper_id = str(helper.id)
+                # ...
+        
+        # ✅ Safe datetime conversion
+        first_connected=brother['first_connected'].isoformat() 
+            if isinstance(brother['first_connected'], datetime) 
+            else brother['first_connected']
+        
+    except Exception as e:  # ✅ Error handling
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get connected brothers: {str(e)}"
+        )
+```
+
+### **How the Fix Works:**
+1. **Eager loading**: `joinedload(Course.user)` ensures the user relationship is loaded in the same query, avoiding lazy loading issues
+2. **Null checks**: Skip courses where `helper` is None instead of crashing
+3. **Error handling**: Catch all exceptions and return a proper HTTP 500 with error message
+4. **Datetime safety**: Check type before calling `.isoformat()` to handle both datetime objects and strings
+
+### **Benefits:**
+- **No more 500 errors**: Proper error handling prevents crashes
+- **Better performance**: Eager loading reduces database queries
+- **Graceful degradation**: Skips invalid data instead of crashing
+- **Clear error messages**: Users see what went wrong instead of generic errors
+
+### **When This Happens:**
+- After deleting a help request when the frontend refreshes the connected brothers list
+- When `course.user` relationship is not loaded (lazy loading issue)
+- When there are orphaned courses (user deleted but course remains)
+- When datetime fields are already strings instead of datetime objects
+
+### **Prevention:**
+1. **Always use eager loading** for relationships that will be accessed
+2. **Add null checks** before accessing relationship attributes
+3. **Wrap endpoints in try/except** for proper error handling
+4. **Use type checks** when converting datetimes to strings
+
+### **Related Files:**
+- `backend/app/api/v1/recommendations.py` - Connected brothers endpoint
+- `backend/app/api/v1/help_requests.py` - Help request deletion endpoint
+- `frontend/lib/hooks/useHelpRequests.ts` - Frontend hook that calls connected-brothers
+
+### **Testing:**
+1. **Test normal flow**: Create help request, verify connected brothers list works
+2. **Test deletion**: Delete help request, verify connected brothers list still works
+3. **Test error handling**: Simulate database errors, verify proper error messages
+4. **Test edge cases**: Test with courses that have no user, verify graceful handling
+
+### **Summary:**
+- **Root cause:** Missing relationship loading, no null checks, and no error handling in connected-brothers endpoint
+- **When it happens:** After deleting a help request when frontend refreshes the connected brothers list
+- **Best fix:** Add eager loading with `joinedload`, null checks, error handling, and safe datetime conversion
+- **Location:** Error occurs in `get_connected_brothers()` endpoint, fix by adding relationship loading and error handling
+
+This ensures the connected brothers endpoint works reliably even after help request deletions and handles edge cases gracefully.
+
+---
 
 

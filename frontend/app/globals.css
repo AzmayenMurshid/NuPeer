@@ -3,24 +3,1127 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Responsive base font size - scales with viewport */
+    font-size: clamp(14px, 1.5vw, 16px);
+  }
+  
+  html {
+    /* Smooth scrolling for better UX */
+    scroll-behavior: smooth;
+  }
+  
   body {
-    /* Light mode: White background, Dark mode: Matt grey-black */
-    @apply bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-50 transition-colors;
+    /* Robinhood-inspired: Clean white/black backgrounds */
+    @apply bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors;
+    /* Ensure consistent rendering across devices */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   }
   
   /* Bright setting - light gold-tinted background */
   body.bright {
-    @apply bg-[#fef3c7];
+    @apply bg-[#fef3c7] dark:bg-[#1a1a1a];
+  }
+  
+  /* Responsive container base */
+  .container-responsive {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: clamp(1rem, 4vw, 2rem);
+    padding-right: clamp(1rem, 4vw, 2rem);
+  }
+  
+  /* Robinhood-inspired card styles */
+  .card {
+    @apply bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-200 dark:border-gray-800;
+    @apply transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply hover:border-primary-400 dark:hover:border-primary-600 hover:shadow-md;
+  }
+  
+  /* Large bold numbers like Robinhood */
+  .metric-value {
+    @apply text-4xl md:text-5xl font-bold tracking-tight;
+  }
+  
+  /* Clean button styles */
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold;
+    @apply px-6 py-3 rounded-lg transition-all duration-200;
+    @apply active:scale-95;
+  }
+  
+  /* Subtle divider */
+  .divider {
+    @apply border-t border-gray-200 dark:border-gray-800;
+  }
+  
+  /* Safe area for bottom navigation */
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Hide scrollbar for carousel */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+  
+  /* Performance optimizations for smooth scrolling */
+  .scroll-optimized {
+    will-change: scroll-position;
+    transform: translateZ(0); /* Force GPU acceleration */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  /* Optimize carousel containers */
+  .carousel-container {
+    will-change: transform;
+    transform: translateZ(0);
+    contain: layout style paint;
+  }
+  
+  /* Optimize cards for better rendering */
+  .card {
+    contain: layout style;
+    transform: translateZ(0);
+  }
+  
+  /* Optimize modal scrolling */
+  .modal-scroll {
+    will-change: scroll-position;
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Content padding for bottom nav */
+  .content-with-nav {
+    padding-bottom: 5rem; /* 4rem nav + 1rem spacing */
+  }
+  
+  @media (min-width: 768px) {
+    .content-with-nav {
+      padding-bottom: 0; /* No padding on desktop - nav is hidden */
+    }
   }
 }
 
-/* Sigma Nu Theme Colors */
+@layer components {
+  /* Component Styles - Semantic class names for common UI patterns */
+
+  /* Layout */
+  .page-container {
+    @apply min-h-screen bg-white dark:bg-black;
+  }
+
+  .page-content {
+    @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
+  }
+
+  .page-header {
+    @apply sticky top-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800;
+  }
+
+  .page-header-inner {
+    @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .page-header-content {
+    @apply flex items-center justify-between h-14;
+  }
+
+  .page-title {
+    @apply text-3xl font-bold text-gray-900 dark:text-white mb-6;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold text-gray-900 dark:text-white mb-4;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-1;
+  }
+
+  /* Forms */
+  .form-container {
+    @apply space-y-4;
+  }
+
+  .form-group {
+    @apply mb-4;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+
+  .form-label-required {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+
+  .form-label-required::after {
+    content: ' *';
+    @apply text-red-500;
+  }
+
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white;
+  }
+
+  .form-input:focus {
+    @apply outline-none ring-2 ring-primary-500 dark:ring-primary-400;
+  }
+
+  .form-textarea {
+    @apply w-full px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white;
+  }
+
+  .form-textarea:focus {
+    @apply outline-none ring-2 ring-primary-500 dark:ring-primary-400;
+  }
+
+  .form-select {
+    @apply w-full px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white;
+  }
+
+  .form-select:focus {
+    @apply outline-none ring-2 ring-primary-500 dark:ring-primary-400;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  .form-helper-text {
+    @apply text-xs text-gray-500 dark:text-gray-400 mt-1;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply px-4 py-2 rounded-lg transition-colors font-medium;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 text-white hover:bg-primary-600;
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/30;
+  }
+
+  .btn-secondary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800;
+  }
+
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-2;
+  }
+
+  .btn-icon {
+    @apply flex items-center gap-2;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white dark:bg-[#0a0a0a] rounded-lg border border-gray-200 dark:border-gray-800;
+  }
+
+  .card-padding {
+    @apply p-6;
+  }
+
+  .card-padding-sm {
+    @apply p-4;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .card-title {
+    @apply text-lg font-semibold text-gray-900 dark:text-white;
+  }
+
+  /* Loading States */
+  .loading-container {
+    @apply text-center;
+  }
+
+  .loading-spinner {
+    @apply animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto;
+  }
+
+  .loading-text {
+    @apply mt-4 text-gray-600 dark:text-gray-400;
+  }
+
+  /* Links */
+  .link-back {
+    @apply text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center gap-2;
+  }
+
+  .link-primary {
+    @apply text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300;
+  }
+
+  /* Text */
+  .text-heading {
+    @apply text-gray-900 dark:text-white;
+  }
+
+  .text-body {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  .text-muted {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .text-small {
+    @apply text-sm;
+  }
+
+  /* Badges and Tags */
+  .badge {
+    @apply px-2 py-1 rounded text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400;
+  }
+
+  /* Lists */
+  .list-item {
+    @apply p-4 border border-gray-200 dark:border-gray-800 rounded-lg;
+  }
+
+  .list-item-header {
+    @apply flex items-start justify-between;
+  }
+
+  .list-item-content {
+    @apply flex-1;
+  }
+
+  .list-item-actions {
+    @apply flex gap-2;
+  }
+
+  .list-empty {
+    @apply text-sm text-gray-500 dark:text-gray-400 text-center py-4;
+  }
+
+  /* Checkboxes and Toggles */
+  .checkbox-label {
+    @apply flex items-center gap-2;
+  }
+
+  .checkbox-input {
+    @apply rounded border-gray-300;
+  }
+
+  /* Experience Form Specific */
+  .experience-form {
+    @apply mb-4 p-4 border border-gray-200 dark:border-gray-800 rounded-lg;
+  }
+
+  .experience-item {
+    @apply p-4 border border-gray-200 dark:border-gray-800 rounded-lg;
+  }
+
+  .experience-item-header {
+    @apply flex items-start justify-between;
+  }
+
+  .experience-item-content {
+    @apply flex-1;
+  }
+
+  .experience-item-title {
+    @apply font-medium text-gray-900 dark:text-white;
+  }
+
+  .experience-item-meta {
+    @apply text-sm text-gray-600 dark:text-gray-400;
+  }
+
+  .experience-item-location {
+    @apply text-xs text-gray-500 dark:text-gray-500;
+  }
+
+  .experience-item-date {
+    @apply text-xs text-gray-500 dark:text-gray-500 mt-1;
+  }
+
+  .experience-item-description {
+    @apply text-sm text-gray-600 dark:text-gray-400 mt-2;
+  }
+
+  .experience-item-actions {
+    @apply flex gap-2;
+  }
+
+  .experience-item-action-btn {
+    @apply p-2 text-gray-600 dark:text-gray-400 hover:text-primary-500 transition-colors;
+  }
+
+  .experience-item-delete-btn {
+    @apply p-2 text-red-600 dark:text-red-400 hover:text-red-700 transition-colors;
+  }
+
+  /* Resume Section */
+  .resume-upload-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
+  }
+
+  .resume-upload-input {
+    @apply block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600;
+  }
+
+  .resume-item {
+    @apply p-3 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center justify-between;
+  }
+
+  .resume-item-content {
+    @apply flex items-center gap-3;
+  }
+
+  .resume-item-name {
+    @apply text-sm font-medium text-gray-900 dark:text-white;
+  }
+
+  .resume-item-size {
+    @apply text-xs text-gray-500 dark:text-gray-500;
+  }
+
+  /* Action Buttons */
+  .action-button-group {
+    @apply flex gap-3;
+  }
+
+  .action-button-primary {
+    @apply px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors;
+  }
+
+  .action-button-secondary {
+    @apply px-4 py-2 bg-primary-100 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-900/30 transition-colors;
+  }
+
+  .action-button-secondary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .action-button-ghost {
+    @apply px-4 py-2 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors;
+  }
+}
+
+@layer utilities {
+  /* Responsive spacing utilities */
+  .spacing-responsive {
+    padding: clamp(1rem, 3vw, 2rem);
+  }
+  
+  .spacing-responsive-sm {
+    padding: clamp(0.5rem, 2vw, 1rem);
+  }
+  
+  .spacing-responsive-lg {
+    padding: clamp(1.5rem, 4vw, 3rem);
+  }
+  
+  /* Responsive text sizes */
+  .text-responsive-xs {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  }
+  
+  .text-responsive-sm {
+    font-size: clamp(0.875rem, 1.75vw, 1rem);
+  }
+  
+  .text-responsive-base {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+  }
+  
+  .text-responsive-lg {
+    font-size: clamp(1.125rem, 2.5vw, 1.25rem);
+  }
+  
+  .text-responsive-xl {
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+  }
+  
+  .text-responsive-2xl {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+  }
+  
+  .text-responsive-3xl {
+    font-size: clamp(1.875rem, 5vw, 2.5rem);
+  }
+  
+  .text-responsive-4xl {
+    font-size: clamp(2.25rem, 6vw, 3rem);
+  }
+  
+  /* Responsive gaps */
+  .gap-responsive {
+    gap: clamp(0.5rem, 2vw, 1rem);
+  }
+  
+  .gap-responsive-md {
+    gap: clamp(1rem, 3vw, 1.5rem);
+  }
+  
+  .gap-responsive-lg {
+    gap: clamp(1.5rem, 4vw, 2rem);
+  }
+  
+  /* Responsive margins */
+  .mb-responsive {
+    margin-bottom: clamp(1rem, 3vw, 2rem);
+  }
+  
+  .mt-responsive {
+    margin-top: clamp(1rem, 3vw, 2rem);
+  }
+}
+
+/* Sigma Nu Theme Colors - Robinhood-inspired */
 :root {
   --sigma-gold: #f59e0b;
   --sigma-gold-dark: #d97706;
   --sigma-gold-light: #fef3c7;
   --sigma-white: #ffffff;
   --sigma-black: #000000;
-  --sigma-matt-black: #1a1a1a;
+  --sigma-matt-black: #0a0a0a;
+  
+  /* Robinhood-inspired colors with Sigma Nu gold */
+  --positive: #10b981; /* Green for positive metrics */
+  --negative: #ef4444; /* Red for negative metrics */
+  --neutral: #6b7280; /* Gray for neutral */
+}
+
+/* Minimal Calendar Styling */
+.rbc-calendar {
+  background-color: transparent;
+  font-family: inherit;
+}
+
+.rbc-header {
+  background-color: transparent;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 8px;
+  font-weight: 400;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+}
+
+.dark .rbc-header {
+  border-bottom-color: #1f1f1f;
+  color: #6b7280;
+}
+
+.rbc-day-bg {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-day-bg {
+  border-color: #1f1f1f;
+  background-color: transparent;
+}
+
+.rbc-off-range-bg {
+  background-color: #fafafa;
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #0a0a0a;
+}
+
+.rbc-today {
+  background-color: #f9fafb !important;
+}
+
+.dark .rbc-today {
+  background-color: #0f0f0f !important;
+}
+
+.rbc-date-cell {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 13px;
+  padding: 8px;
+}
+
+.dark .rbc-date-cell {
+  color: #6b7280;
+}
+
+.rbc-date-cell.rbc-now {
+  color: #374151;
+  font-weight: 500;
+}
+
+.dark .rbc-date-cell.rbc-now {
+  color: #9ca3af;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  border-color: #1f1f1f;
+}
+
+.rbc-time-header-content {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-time-header-content {
+  border-color: #1f1f1f;
+}
+
+.rbc-time-content {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-time-content {
+  border-color: #1f1f1f;
+}
+
+.rbc-time-view {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-time-view {
+  border-color: #1f1f1f;
+}
+
+.rbc-month-view {
+  border: none;
+}
+
+.dark .rbc-month-view {
+  border: none;
+}
+
+.rbc-agenda-view {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-agenda-view {
+  border-color: #1f1f1f;
+}
+
+.rbc-agenda-view table {
+  background-color: transparent;
+}
+
+.dark .rbc-agenda-view table {
+  background-color: transparent;
+}
+
+.rbc-agenda-view table tbody tr {
+  border-color: #f3f4f6;
+}
+
+.dark .rbc-agenda-view table tbody tr {
+  border-color: #1f1f1f;
+}
+
+.rbc-agenda-view table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.dark .rbc-agenda-view table tbody tr:hover {
+  background-color: #0f0f0f;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.dark .rbc-agenda-date-cell,
+.dark .rbc-agenda-time-cell {
+  color: #6b7280;
+}
+
+.rbc-agenda-event-cell {
+  color: #111827;
+  font-weight: 400;
+}
+
+.dark .rbc-agenda-event-cell {
+  color: #e5e7eb;
+}
+
+.rbc-show-more {
+  background-color: transparent;
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.dark .rbc-show-more {
+  background-color: transparent;
+  color: #6b7280;
+}
+
+.rbc-show-more:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.dark .rbc-show-more:hover {
+  background-color: #1f1f1f;
+  color: #9ca3af;
+}
+
+.rbc-toolbar {
+  margin-bottom: 0;
+  padding: 0;
+}
+
+.rbc-toolbar button {
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  font-weight: 400;
+}
+
+.dark .rbc-toolbar button {
+  color: #6b7280;
+}
+
+.rbc-toolbar button:hover {
+  background-color: transparent;
+  color: #111827;
+}
+
+.dark .rbc-toolbar button:hover {
+  color: #e5e7eb;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: transparent;
+  color: #111827;
+  font-weight: 500;
+}
+
+.dark .rbc-toolbar button.rbc-active {
+  color: #e5e7eb;
+}
+
+.rbc-day-slot .rbc-time-slot .rbc-label {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dark .rbc-day-slot .rbc-time-slot .rbc-label {
+  color: #6b7280;
+}
+
+.rbc-month-row .rbc-day-bg {
+  background-color: transparent;
+}
+
+.dark .rbc-month-row .rbc-day-bg {
+  background-color: transparent;
+}
+
+.rbc-month-row .rbc-day-bg.rbc-today {
+  background-color: #f9fafb;
+}
+
+.dark .rbc-month-row .rbc-day-bg.rbc-today {
+  background-color: #0f0f0f;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  color: #9ca3af;
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  color: #6b7280;
+}
+
+.rbc-day-slot .rbc-time-slot.rbc-now {
+  color: #374151;
+  font-weight: 500;
+}
+
+.dark .rbc-day-slot .rbc-time-slot.rbc-now {
+  color: #9ca3af;
+}
+
+/* Event styling */
+.rbc-event {
+  border: none;
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.rbc-event:focus {
+  outline: none;
+}
+
+.rbc-selected {
+  background-color: transparent;
+}
+
+/* Remove default borders and shadows */
+.rbc-month-view,
+.rbc-time-view,
+.rbc-day-view {
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.rbc-month-view .rbc-header {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dark .rbc-month-view .rbc-header {
+  border-bottom-color: #1f1f1f;
+}
+
+/* Week and Day View Styling */
+.rbc-time-view {
+  background-color: transparent;
+}
+
+.dark .rbc-time-view {
+  background-color: transparent;
+}
+
+.rbc-time-header {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dark .rbc-time-header {
+  border-bottom-color: #1f1f1f;
+  background-color: transparent;
+}
+
+.rbc-time-header-gutter {
+  background-color: transparent;
+  border-right: 1px solid #f3f4f6;
+}
+
+.dark .rbc-time-header-gutter {
+  border-right-color: #1f1f1f;
+  background-color: transparent;
+}
+
+.rbc-time-content {
+  border-top: none;
+  background-color: transparent;
+}
+
+.dark .rbc-time-content {
+  background-color: transparent;
+}
+
+.rbc-time-gutter {
+  background-color: transparent;
+  border-right: 1px solid #f3f4f6;
+}
+
+.dark .rbc-time-gutter {
+  border-right-color: #1f1f1f;
+  background-color: transparent;
+}
+
+.rbc-time-gutter .rbc-time-slot {
+  border-top: 1px solid #f3f4f6;
+}
+
+.dark .rbc-time-gutter .rbc-time-slot {
+  border-top-color: #1f1f1f;
+}
+
+.rbc-day-slot {
+  background-color: transparent;
+}
+
+.dark .rbc-day-slot {
+  background-color: transparent;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #f3f4f6;
+  min-height: 60px;
+}
+
+.dark .rbc-day-slot .rbc-time-slot {
+  border-top-color: #1f1f1f;
+}
+
+.rbc-day-slot .rbc-time-slot.rbc-now {
+  background-color: transparent;
+  border-top: 2px solid #9ca3af;
+}
+
+.dark .rbc-day-slot .rbc-time-slot.rbc-now {
+  border-top-color: #6b7280;
+}
+
+.rbc-time-slot {
+  background-color: transparent;
+}
+
+.dark .rbc-time-slot {
+  background-color: transparent;
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #f3f4f6;
+}
+
+.dark .rbc-time-header-content {
+  border-left-color: #1f1f1f;
+}
+
+.rbc-time-header-content .rbc-header {
+  border-bottom: 1px solid #f3f4f6;
+  padding: 8px 12px;
+  font-weight: 400;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+}
+
+.dark .rbc-time-header-content .rbc-header {
+  border-bottom-color: #1f1f1f;
+  color: #6b7280;
+}
+
+.rbc-time-header-content .rbc-header.rbc-today {
+  background-color: #f9fafb;
+  color: #374151;
+  font-weight: 500;
+}
+
+.dark .rbc-time-header-content .rbc-header.rbc-today {
+  background-color: #0f0f0f;
+  color: #9ca3af;
+}
+
+.rbc-day-column {
+  border-left: 1px solid #f3f4f6;
+}
+
+.dark .rbc-day-column {
+  border-left-color: #1f1f1f;
+}
+
+.rbc-day-column:first-child {
+  border-left: none;
+}
+
+.rbc-current-time-indicator {
+  background-color: #9ca3af;
+  height: 2px;
+}
+
+.dark .rbc-current-time-indicator {
+  background-color: #6b7280;
+}
+
+.rbc-current-time-indicator::before {
+  background-color: #9ca3af;
+  border: 2px solid #ffffff;
+}
+
+.dark .rbc-current-time-indicator::before {
+  background-color: #6b7280;
+  border-color: #0a0a0a;
+}
+
+/* Week view specific */
+.rbc-week-view {
+  background-color: transparent;
+}
+
+.dark .rbc-week-view {
+  background-color: transparent;
+}
+
+/* Day view specific */
+.rbc-day-view {
+  background-color: transparent;
+}
+
+.dark .rbc-day-view {
+  background-color: transparent;
+}
+
+/* Event styling in time views */
+.rbc-time-view .rbc-event {
+  border: none;
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 400;
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.dark .rbc-time-view .rbc-event {
+  background-color: #1f1f1f;
+  color: #e5e7eb;
+}
+
+.rbc-time-view .rbc-event:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.rbc-time-view .rbc-event.rbc-selected {
+  background-color: #e5e7eb;
+}
+
+.dark .rbc-time-view .rbc-event.rbc-selected {
+  background-color: #2a2a2a;
+}
+
+/* Time slot labels */
+.rbc-time-gutter .rbc-label {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 11px;
+  padding: 0 8px;
+}
+
+.dark .rbc-time-gutter .rbc-label {
+  color: #6b7280;
+}
+
+.rbc-time-gutter .rbc-label.rbc-label-allday {
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.dark .rbc-time-gutter .rbc-label.rbc-label-allday {
+  color: #6b7280;
+}
+
+/* All-day event area */
+.rbc-allday-cell {
+  background-color: transparent;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dark .rbc-allday-cell {
+  background-color: transparent;
+  border-bottom-color: #1f1f1f;
+}
+
+.rbc-allday-cell .rbc-day-bg {
+  border: none;
+}
+
+/* Remove default hover effects */
+.rbc-time-slot:hover {
+  background-color: transparent;
+}
+
+.dark .rbc-time-slot:hover {
+  background-color: transparent;
+}
+
+.rbc-day-slot .rbc-time-slot:hover {
+  background-color: transparent;
+}
+
+.dark .rbc-day-slot .rbc-time-slot:hover {
+  background-color: transparent;
+}
+
+/* Stop scrolling after 11 PM for week and day views */
+.rbc-time-view .rbc-time-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* The min/max props (6 AM to 11 PM) should limit the time range */
+/* Add CSS to ensure scrolling stops at the last time slot */
+.rbc-time-view .rbc-time-content > div {
+  position: relative;
+}
+
+/* Add a visual boundary at the bottom to mark 11 PM */
+.rbc-time-view .rbc-time-content::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e5e7eb;
+  z-index: 10;
+  pointer-events: none;
+  display: block;
+}
+
+.dark .rbc-time-view .rbc-time-content::after {
+  background: #1f1f1f;
+}
+
+/* Ensure the last time slot has a clear boundary */
+.rbc-day-slot .rbc-time-slot:last-child {
+  border-bottom: 2px solid #e5e7eb !important;
+}
+
+.dark .rbc-day-slot .rbc-time-slot:last-child {
+  border-bottom-color: #1f1f1f !important;
+}
+
+/* Prevent scrolling beyond the content by limiting scroll position */
+.rbc-time-view .rbc-time-content {
+  scroll-behavior: smooth;
+}
+
+/* Hide any overflow content that might appear after 11 PM */
+.rbc-time-view {
+  overflow: hidden;
+}
+
+.rbc-time-view .rbc-time-content {
+  max-height: 100%;
 }
 

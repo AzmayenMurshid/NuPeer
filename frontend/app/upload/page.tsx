@@ -2,16 +2,76 @@
 
 import { useState } from 'react'
 import { useUploadTranscript, useTranscriptStatus, useTranscripts } from '@/lib/hooks/useTranscripts'
+import { useCreateCourse, useUpdateCourse, useDeleteCourse, useCourses, Course } from '@/lib/hooks/useCourses'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import Link from 'next/link'
+import { UploadPageHeader } from '@/components/upload/UploadPageHeader'
+import { TranscriptUploadForm } from '@/components/upload/TranscriptUploadForm'
+import { ProcessingStatus } from '@/components/upload/ProcessingStatus'
+import { AddCourseForm } from '@/components/upload/AddCourseForm'
+import { CurrentCoursesList } from '@/components/upload/CurrentCoursesList'
+import { PreviousTranscripts } from '@/components/upload/PreviousTranscripts'
 
-function UploadPageContent() {
+type CourseFormData = {
+  course_code: string
+  course_name: string
+  credit_hours: string
+  semester: string
+  year: string
+}
+
+const UploadPageContent = (): JSX.Element => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadedTranscriptId, setUploadedTranscriptId] = useState<string | null>(null)
+  const [showAddCourseForm, setShowAddCourseForm] = useState(false)
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [courseForm, setCourseForm] = useState<CourseFormData>({
+    course_code: '',
+    course_name: '',
+    credit_hours: '',
+    semester: '',
+    year: ''
+  })
+  const [multipleCourses, setMultipleCourses] = useState<CourseFormData[]>([{
+    course_code: '',
+    course_name: '',
+    credit_hours: '',
+    semester: '',
+    year: ''
+  }])
   
   const uploadMutation = useUploadTranscript()
+  const createCourseMutation = useCreateCourse()
+  const updateCourseMutation = useUpdateCourse()
+  const deleteCourseMutation = useDeleteCourse()
+  const { data: courses } = useCourses()
   const { data: transcripts } = useTranscripts()
   const { data: transcriptStatus } = useTranscriptStatus(uploadedTranscriptId || '')
+  
+  // Filter to only show manually added courses (current courses)
+  const currentCourses = courses?.filter(course => !course.transcript_id) || []
+  
+  const startEdit = (course: Course) => {
+    setEditingCourse(course)
+    setCourseForm({
+      course_code: course.course_code || '',
+      course_name: course.course_name || '',
+      credit_hours: course.credit_hours?.toString() || '',
+      semester: course.semester || '',
+      year: course.year?.toString() || ''
+    })
+    setShowAddCourseForm(false)
+  }
+  
+  const cancelEdit = () => {
+    setEditingCourse(null)
+    setCourseForm({
+      course_code: '',
+      course_name: '',
+      credit_hours: '',
+      semester: '',
+      year: ''
+    })
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -31,146 +91,192 @@ function UploadPageContent() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
-      case 'processing':
-        return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-      case 'failed':
-        return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
-      default:
-        return 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20'
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!courseForm.course_code.trim()) {
+      return
+    }
+
+    try {
+      await createCourseMutation.mutateAsync({
+        course_code: courseForm.course_code.trim(),
+        course_name: courseForm.course_name.trim() || undefined,
+        credit_hours: courseForm.credit_hours ? parseFloat(courseForm.credit_hours) : undefined,
+        semester: courseForm.semester || undefined,
+        year: courseForm.year ? parseInt(courseForm.year) : undefined
+      })
+      
+      // Reset form
+      setCourseForm({
+        course_code: '',
+        course_name: '',
+        credit_hours: '',
+        semester: '',
+        year: ''
+      })
+      setShowAddCourseForm(false)
+    } catch (error) {
+      console.error('Failed to add course:', error)
     }
   }
 
+  const handleAddMultipleCourses = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Filter out empty courses (at least course_code is required)
+    const validCourses = multipleCourses.filter(course => course.course_code.trim())
+    
+    if (validCourses.length === 0) {
+      return
+    }
+
+    try {
+      // Create all courses in parallel
+      await Promise.all(
+        validCourses.map(course =>
+          createCourseMutation.mutateAsync({
+            course_code: course.course_code.trim(),
+            course_name: course.course_name.trim() || undefined,
+            credit_hours: course.credit_hours ? parseFloat(course.credit_hours) : undefined,
+            semester: course.semester || undefined,
+            year: course.year ? parseInt(course.year) : undefined
+          })
+        )
+      )
+      
+      // Reset form
+      setMultipleCourses([{
+        course_code: '',
+        course_name: '',
+        credit_hours: '',
+        semester: '',
+        year: ''
+      }])
+      setShowAddCourseForm(false)
+    } catch (error) {
+      console.error('Failed to add courses:', error)
+    }
+  }
+
+  const addCourseRow = () => {
+    setMultipleCourses([...multipleCourses, {
+      course_code: '',
+      course_name: '',
+      credit_hours: '',
+      semester: '',
+      year: ''
+    }])
+  }
+
+  const removeCourseRow = (index: number) => {
+    if (multipleCourses.length > 1) {
+      setMultipleCourses(multipleCourses.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateMultipleCourse = (index: number, field: string, value: string) => {
+    const updated = [...multipleCourses]
+    updated[index] = { ...updated[index], [field]: value }
+    setMultipleCourses(updated)
+  }
+
+  const handleCourseFormChange = (field: keyof CourseFormData, value: string) => {
+    setCourseForm({ ...courseForm, [field]: value })
+  }
+  
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!editingCourse || !courseForm.course_code.trim()) {
+      return
+    }
+
+    try {
+      await updateCourseMutation.mutateAsync({
+        courseId: editingCourse.id,
+        courseData: {
+          course_code: courseForm.course_code.trim(),
+          course_name: courseForm.course_name.trim() || undefined,
+          credit_hours: courseForm.credit_hours ? parseFloat(courseForm.credit_hours) : undefined,
+          semester: courseForm.semester || undefined,
+          year: courseForm.year ? parseInt(courseForm.year) : undefined
+        }
+      })
+      
+      // Reset form
+      cancelEdit()
+    } catch (error) {
+      console.error('Failed to update course:', error)
+    }
+  }
+
+  const handleToggleForm = () => {
+    setShowAddCourseForm(!showAddCourseForm)
+    if (showAddCourseForm) {
+      setMultipleCourses([{
+        course_code: '',
+        course_name: '',
+        credit_hours: '',
+        semester: '',
+        year: ''
+      }])
+    }
+  }
+
+  const handleDeleteCourse = (courseId: string) => {
+    deleteCourseMutation.mutate(courseId)
+  }
+
   return (
-    <main className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <Link href="/dashboard" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-            ← Back to Dashboard
-          </Link>
-        </div>
+    <main className="min-h-screen bg-white dark:bg-black content-with-nav">
+      <UploadPageHeader />
         
-        <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Upload Transcript</h1>
-          <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">ΣΝ</span>
-        </div>
-        <p className="text-xl text-gray-700 dark:text-gray-200 mb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Upload your transcript PDF to automatically extract your courses
         </p>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-8 shadow-xl">
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-white dark:text-gray-300 mb-2">
-              Select PDF File
-            </label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileChange}
-              className="block w-full text-sm text-gray-500 dark:text-gray-400
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-primary-50 dark:file:bg-primary-900/30 file:text-primary-700 dark:file:text-primary-300
-                hover:file:bg-primary-100 dark:hover:file:bg-primary-900/50"
-            />
-          </div>
+        <TranscriptUploadForm
+          selectedFile={selectedFile}
+          onFileChange={handleFileChange}
+          onUpload={handleUpload}
+          isPending={uploadMutation.isPending}
+          isError={uploadMutation.isError}
+          isSuccess={uploadMutation.isSuccess && !!uploadedTranscriptId}
+          error={uploadMutation.error}
+        />
 
-          {selectedFile && (
-            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                Selected: <span className="font-medium">{selectedFile.name}</span>
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
-          )}
+        <ProcessingStatus transcriptStatus={transcriptStatus || null} />
 
-          <button
-            onClick={handleUpload}
-            disabled={!selectedFile || uploadMutation.isPending}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {uploadMutation.isPending ? 'Uploading...' : 'Upload Transcript'}
-          </button>
+        <AddCourseForm
+          editingCourse={editingCourse}
+          showAddCourseForm={showAddCourseForm}
+          multipleCourses={multipleCourses}
+          courseForm={courseForm}
+          onToggleForm={handleToggleForm}
+          onCancelEdit={cancelEdit}
+          onAddMultipleCourses={handleAddMultipleCourses}
+          onAddCourse={handleAddCourse}
+          onUpdateCourse={handleUpdateCourse}
+          onAddCourseRow={addCourseRow}
+          onRemoveCourseRow={removeCourseRow}
+          onUpdateMultipleCourse={updateMultipleCourse}
+          onCourseFormChange={handleCourseFormChange}
+          createCourseMutation={createCourseMutation}
+          updateCourseMutation={updateCourseMutation}
+        />
 
-          {uploadMutation.isError && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-400 text-sm">
-              <p className="font-medium mb-1">Upload failed</p>
-              <p className="text-xs">
-                {uploadMutation.error instanceof Error 
-                  ? uploadMutation.error.message 
-                  : (uploadMutation.error as any)?.response?.data?.detail || 'Please try again.'}
-              </p>
-              {(uploadMutation.error as any)?.response?.data?.detail?.includes('MinIO') && (
-                <p className="text-xs mt-2">
-                  💡 Make sure MinIO is running. Check the backend setup guide.
-                </p>
-              )}
-            </div>
-          )}
+        <CurrentCoursesList
+          courses={currentCourses}
+          onEdit={startEdit}
+          onDelete={handleDeleteCourse}
+          isDeleting={deleteCourseMutation.isPending}
+          isUpdating={updateCourseMutation.isPending}
+          deleteError={deleteCourseMutation.error}
+        />
 
-          {uploadMutation.isSuccess && uploadedTranscriptId && (
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
-              <p className="text-green-800 dark:text-green-300 font-medium mb-2">Upload successful!</p>
-              <p className="text-sm text-green-700 dark:text-green-400">
-                Your transcript is being processed. This may take a few moments.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Processing Status */}
-        {transcriptStatus && (
-          <div className="bg-[#d97706] dark:bg-gray-800 rounded-lg p-6 mb-8 shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Processing Status</h2>
-            <div className="flex items-center gap-3 mb-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(transcriptStatus.processing_status)}`}>
-                {transcriptStatus.processing_status.charAt(0).toUpperCase() + transcriptStatus.processing_status.slice(1)}
-              </span>
-              <span className="text-sm text-white dark:text-gray-300">
-                {transcriptStatus.file_name}
-              </span>
-            </div>
-            {transcriptStatus.error_message && (
-              <p className="text-sm text-red-600 dark:text-red-400 mt-2">{transcriptStatus.error_message}</p>
-            )}
-            {transcriptStatus.processing_status === 'completed' && (
-              <p className="text-sm text-green-600 dark:text-green-400 mt-2">
-                ✓ Transcript processed successfully! Your courses have been extracted.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Previous Transcripts */}
-        {transcripts && transcripts.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Your Transcripts</h2>
-            <div className="space-y-3">
-              {transcripts.map((transcript) => (
-                <div
-                  key={transcript.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">{transcript.file_name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Uploaded: {new Date(transcript.upload_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(transcript.processing_status)}`}>
-                    {transcript.processing_status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <PreviousTranscripts transcripts={transcripts} />
       </div>
     </main>
   )

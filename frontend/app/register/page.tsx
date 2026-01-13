@@ -13,6 +13,8 @@ export default function RegisterPage() {
     last_name: '',
     pledge_class: '',
     graduation_year: '',
+    phone_number: '',
+    is_alumni: false,
   })
 
   const registerMutation = useRegister()
@@ -44,19 +46,21 @@ export default function RegisterPage() {
       last_name: formData.last_name,
       pledge_class: formData.pledge_class || undefined,
       graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : undefined,
+      phone_number: formData.phone_number || undefined,
+      is_alumni: formData.is_alumni,
     })
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-8">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8">
+    <main className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-white dark:bg-black">
+      <div className="max-w-md w-full card p-8">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Join NuPeer</h1>
-            <span className="text-lg font-semibold text-primary-600 dark:text-primary-400">ΣΝ</span>
+            <span className="text-sm font-semibold text-primary-500">ΣΝ</span>
           </div>
-          <p className="text-gray-600 dark:text-gray-300">Sigma Nu Zeta Chi Chapter</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create your brother profile</p>
+          <p className="text-gray-600 dark:text-gray-400">Sigma Nu Zeta Chi Chapter</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">Create your brother profile</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,7 +76,7 @@ export default function RegisterPage() {
                 value={formData.first_name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
             <div>
@@ -86,7 +90,7 @@ export default function RegisterPage() {
                 value={formData.last_name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -139,6 +143,21 @@ export default function RegisterPage() {
           </div>
 
           <div>
+            <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Phone Number
+            </label>
+            <input
+              id="phone_number"
+              name="phone_number"
+              type="tel"
+              value={formData.phone_number}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="e.g., (555) 123-4567"
+            />
+          </div>
+
+          <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password <span className="text-red-500">*</span>
             </label>
@@ -178,6 +197,20 @@ export default function RegisterPage() {
             </div>
           )}
 
+          <div className="flex items-center gap-2">
+            <input
+              id="is_alumni"
+              name="is_alumni"
+              type="checkbox"
+              checked={formData.is_alumni}
+              onChange={(e) => setFormData({ ...formData, is_alumni: e.target.checked })}
+              className="rounded border-gray-300"
+            />
+            <label htmlFor="is_alumni" className="text-sm text-gray-700 dark:text-gray-300">
+              I am an alumnus/alumna
+            </label>
+          </div>
+
           {registerMutation.isSuccess && (
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-green-700 dark:text-green-400 text-sm">
               Registration successful! Redirecting to login...
@@ -187,7 +220,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={registerMutation.isPending}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+            className="w-full bg-primary-500 text-white py-2 px-4 rounded-lg hover:bg-primary-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium active:scale-95"
           >
             {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
           </button>

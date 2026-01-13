@@ -109,14 +109,33 @@ class StorageService:
     
     def delete_file(self, file_key: str) -> bool:
         """Delete file from object storage"""
+        # Try to reinitialize if client is None
+        if self.s3_client is None:
+            self._reinitialize_if_needed()
+        
+        # If still None, storage is not available - return False but don't raise
+        if not self.s3_client:
+            print(f"Warning: Storage service not available, skipping file deletion: {file_key}")
+            return False
+        
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=file_key)
             return True
-        except ClientError:
+        except (ClientError, AttributeError) as e:
+            print(f"Warning: Could not delete file from storage: {file_key}, error: {e}")
             return False
     
     def get_file_url(self, file_key: str, expires_in: int = 3600) -> str:
         """Generate presigned URL for file access"""
+        # Try to reinitialize if client is None
+        if self.s3_client is None:
+            self._reinitialize_if_needed()
+        
+        # If still None, storage is not available - return empty string
+        if not self.s3_client:
+            print(f"Warning: Storage service not available, cannot generate URL for: {file_key}")
+            return ""
+        
         try:
             url = self.s3_client.generate_presigned_url(
                 'get_object',
@@ -124,7 +143,8 @@ class StorageService:
                 ExpiresIn=expires_in
             )
             return url
-        except ClientError:
+        except (ClientError, AttributeError) as e:
+            print(f"Warning: Could not generate presigned URL for file: {file_key}, error: {e}")
             return ""
 
 
