@@ -138,17 +138,18 @@ export function PointsTrendChart({
               padding: '12px',
               boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
             }}
-            formatter={(value: any, name: string, props: any) => {
-              if (name === 'Total Points' || name === 'Points (Projected)') {
-                const attempted = props.payload.attempted_credits ? ` | Attempted: ${props.payload.attempted_credits.toFixed(1)}` : ''
-                const earned = props.payload.earned_credits ? ` | Earned: ${props.payload.earned_credits.toFixed(1)}` : ''
-                return [`${value.toFixed(1)}${attempted}${earned}`, name]
+            formatter={(value: any, name?: string, props?: any) => {
+              const displayName = name || ''
+              if (displayName === 'Total Points' || displayName === 'Points (Projected)') {
+                const attempted = props?.payload?.attempted_credits ? ` | Attempted: ${props.payload.attempted_credits.toFixed(1)}` : ''
+                const earned = props?.payload?.earned_credits ? ` | Earned: ${props.payload.earned_credits.toFixed(1)}` : ''
+                return [`${value.toFixed(1)}${attempted}${earned}`, displayName]
               }
-              if (name === 'Earned Credits' || name === 'Earned Credits (Projected)') {
-                const points = props.payload.points ? ` | Points: ${props.payload.points.toFixed(1)}` : ''
-                return [`${value.toFixed(1)} credits${points}`, name]
+              if (displayName === 'Earned Credits' || displayName === 'Earned Credits (Projected)') {
+                const points = props?.payload?.points ? ` | Points: ${props.payload.points.toFixed(1)}` : ''
+                return [`${value.toFixed(1)} credits${points}`, displayName]
               }
-              return [value, name]
+              return [value, displayName]
             }}
             labelFormatter={(label) => `Period: ${label}`}
           />
