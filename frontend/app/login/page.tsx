@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useLogin } from '@/lib/hooks/useAuth'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const loginMutation = useLogin()
@@ -100,6 +100,22 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-white dark:bg-black">
+        <div className="max-w-md w-full card p-8">
+          <div className="text-center">
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
 
