@@ -124,13 +124,14 @@ export function GPATrendChart({
                 padding: '12px',
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
               }}
-              formatter={(value: any, name: string, props: any) => {
-                if (name === 'GPA' || name === 'GPA (Projected)') {
-                  const credits = props.payload.credits ? ` | Credits: ${props.payload.credits}` : ''
-                  const courses = props.payload.course_count ? ` | Courses: ${props.payload.course_count}` : ''
-                  return [`${value.toFixed(2)}${credits}${courses}`, name]
+              formatter={(value: any, name?: string, props?: any) => {
+                const displayName = name || ''
+                if (displayName === 'GPA' || displayName === 'GPA (Projected)') {
+                  const credits = props?.payload?.credits ? ` | Credits: ${props.payload.credits}` : ''
+                  const courses = props?.payload?.course_count ? ` | Courses: ${props.payload.course_count}` : ''
+                  return [`${value.toFixed(2)}${credits}${courses}`, displayName]
                 }
-                return [value, name]
+                return [value, displayName]
               }}
               labelFormatter={(label) => `Period: ${label}`}
             />
