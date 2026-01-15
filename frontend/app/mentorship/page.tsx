@@ -180,6 +180,81 @@ function MentorshipContent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header with Description */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Users className="w-8 h-8 text-primary-500" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mentorship Program</h1>
+            <span className="text-sm font-semibold text-primary-500">ΣΝ</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed max-w-3xl">
+            Connect with Sigma Nu alumni mentors to accelerate your career growth, or give back by mentoring 
+            the next generation of brothers. Build meaningful professional relationships that strengthen our 
+            brotherhood across generations.
+          </p>
+        </div>
+
+        {/* Program Description Section */}
+        <div className="card p-6 md:p-8 mb-6 bg-gradient-to-br from-primary-50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-900/10 border border-primary-200 dark:border-primary-800">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary-500/10 dark:bg-primary-500/20 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                About the Mentorship Program
+              </h2>
+              <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
+                The Sigma Nu Zeta Chi Mentorship Program connects current students and recent graduates with experienced alumni 
+                to foster professional growth, career development, and lasting brotherhood connections. Whether you're seeking 
+                guidance or looking to give back, this platform facilitates meaningful mentorship relationships.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="flex items-start gap-3">
+                  <GraduationCap className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">For Students & Recent Graduates</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+                      Find mentors who can provide career advice, industry insights, resume feedback, and guidance on navigating 
+                      your professional journey. Connect with alumni in your field of interest.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Briefcase className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">For Alumni</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+                      Share your expertise and help shape the next generation of Sigma Nu brothers. Mentor students and recent 
+                      graduates while earning points for your contributions to the community.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Smart Matching</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+                      Our platform matches mentors and mentees based on industry, major, location, and career interests to ensure 
+                      meaningful and relevant connections.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <TrendingUp className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Earn Points</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed">
+                      Get rewarded for participating in the program. Complete your profile, accept mentorship requests, and 
+                      contribute to the community to climb the leaderboard.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Bar - Minimal Dashboard Style */}
         <div className="flex items-center gap-6 mb-6 text-sm">
           <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">

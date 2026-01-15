@@ -7,7 +7,7 @@ interface AcademicAnalysisProps {
     topDepartment: { category: string; percentage: number } | null
     avgCreditsPerSemester: number
     isImproving: boolean
-    bestSemester: { period: string }
+    bestSemester: { period: string; gpa: number }
     worstSemester: { period: string; gpa: number }
   }
   filteredGradeDistribution: any[]
