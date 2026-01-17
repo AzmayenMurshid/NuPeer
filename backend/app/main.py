@@ -19,15 +19,23 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
+# Ensure CORS_ORIGINS is a list
+cors_origins_list = settings.CORS_ORIGINS
+if isinstance(cors_origins_list, str):
+    cors_origins_list = [cors_origins_list]
+elif not isinstance(cors_origins_list, list):
+    cors_origins_list = ["http://localhost:3000", "http://localhost:3001"]
+
 # Log CORS origins for debugging
-logger.info(f"CORS Origins configured: {settings.CORS_ORIGINS}")
+logger.info(f"CORS Origins configured: {cors_origins_list}")
+logger.info(f"CORS Origins type: {type(cors_origins_list)}")
 
 # CORS middleware - must be added before routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
@@ -52,4 +60,15 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/debug/cors")
+async def debug_cors():
+    """Debug endpoint to check CORS configuration"""
+    return {
+        "cors_origins_raw": settings.CORS_ORIGINS,
+        "cors_origins_type": str(type(settings.CORS_ORIGINS)),
+        "cors_origins_list": cors_origins_list,
+        "cors_configured": True
+    }
 
