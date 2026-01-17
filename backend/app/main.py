@@ -3,8 +3,13 @@ NuPeer - Main FastAPI Application
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, calendar, mentorship, points
 from app.core.config import settings
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="NuPeer API",
@@ -14,13 +19,17 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# CORS middleware
+# Log CORS origins for debugging
+logger.info(f"CORS Origins configured: {settings.CORS_ORIGINS}")
+
+# CORS middleware - must be added before routers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routers
