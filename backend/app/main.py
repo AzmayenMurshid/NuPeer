@@ -26,6 +26,13 @@ if isinstance(cors_origins_list, str):
 elif not isinstance(cors_origins_list, list):
     cors_origins_list = ["http://localhost:3000", "http://localhost:3001"]
 
+# Always include localhost origins for local development
+# This allows localhost to work even if CORS_ORIGINS only has production URLs
+localhost_origins = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"]
+for origin in localhost_origins:
+    if origin not in cors_origins_list:
+        cors_origins_list.append(origin)
+
 # Log CORS origins for debugging
 logger.info(f"CORS Origins configured: {cors_origins_list}")
 logger.info(f"CORS Origins type: {type(cors_origins_list)}")
@@ -50,6 +57,17 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytic
 app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"])
 app.include_router(mentorship.router, prefix="/api/v1/mentorship", tags=["Mentorship"])
 app.include_router(points.router, prefix="/api/v1", tags=["Points"])
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Log startup information - storage is optional"""
+    from app.core.storage import storage_service
+    if storage_service.s3_client:
+        logger.info("Storage service: Available")
+    else:
+        logger.info("Storage service: Not available (S3 credentials not configured or invalid)")
+        logger.info("Application will continue - file uploads will fail until S3 is configured")
 
 
 @app.get("/")
