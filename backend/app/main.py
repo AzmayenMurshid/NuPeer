@@ -19,10 +19,15 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# Ensure CORS_ORIGINS is a list
+# Ensure CORS_ORIGINS is a list (settings.CORS_ORIGINS should already be a list from config.py)
 cors_origins_list = settings.CORS_ORIGINS
 if isinstance(cors_origins_list, str):
-    cors_origins_list = [cors_origins_list]
+    # If it's still a string, parse it
+    import json
+    try:
+        cors_origins_list = json.loads(cors_origins_list) if cors_origins_list.startswith('[') else cors_origins_list.split(',')
+    except:
+        cors_origins_list = [cors_origins_list]
 elif not isinstance(cors_origins_list, list):
     cors_origins_list = ["http://localhost:3000", "http://localhost:3001"]
 
@@ -33,11 +38,15 @@ for origin in localhost_origins:
     if origin not in cors_origins_list:
         cors_origins_list.append(origin)
 
+# Ensure all origins are strings and remove duplicates
+cors_origins_list = list(dict.fromkeys([str(origin).strip() for origin in cors_origins_list if origin]))
+
 # Log CORS origins for debugging
 logger.info(f"CORS Origins configured: {cors_origins_list}")
-logger.info(f"CORS Origins type: {type(cors_origins_list)}")
+logger.info(f"CORS Origins count: {len(cors_origins_list)}")
 
 # CORS middleware - must be added before routers
+# max_age=3600 caches preflight responses for 1 hour
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins_list,
@@ -45,6 +54,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Include routers
@@ -66,8 +76,9 @@ async def startup_event():
     if storage_service.s3_client:
         logger.info("Storage service: Available")
     else:
-        logger.info("Storage service: Not available (S3 credentials not configured or invalid)")
-        logger.info("Application will continue - file uploads will fail until S3 is configured")
+        # Use DEBUG level for optional service warnings - reduces log noise
+        logger.debug("Storage service: Not available (S3 credentials not configured or invalid)")
+        logger.debug("Application will continue - file uploads will fail until S3 is configured")
 
 
 @app.get("/")
@@ -77,7 +88,24 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    """Health check endpoint - checks database connectivity"""
+    from app.core.database import engine
+    from sqlalchemy import text
+    
+    try:
+        # Test database connection
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": "disconnected",
+            "error": str(e)
+        }
 
 
 @app.get("/debug/cors")
@@ -87,6 +115,7 @@ async def debug_cors():
         "cors_origins_raw": settings.CORS_ORIGINS,
         "cors_origins_type": str(type(settings.CORS_ORIGINS)),
         "cors_origins_list": cors_origins_list,
-        "cors_configured": True
+        "cors_configured": True,
+        "localhost_included": any("localhost" in origin or "127.0.0.1" in origin for origin in cors_origins_list)
     }
 

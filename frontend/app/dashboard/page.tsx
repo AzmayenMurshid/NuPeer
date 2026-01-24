@@ -3,7 +3,6 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAcademicAnalytics } from '@/lib/hooks/useAnalytics'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useMajorMatchBrothers, useGroupStudyBrothers } from '@/lib/hooks/useHelpRequests'
 import { useCourses } from '@/lib/hooks/useCourses'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
@@ -192,9 +191,6 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <ProtectedRoute>
-      <DashboardContent />
-    </ProtectedRoute>
-  )
+  // Authentication protection removed - dashboard is now publicly accessible
+  return <DashboardContent />
 }

@@ -35,13 +35,19 @@ def main():
     try:
         import uvicorn  # type: ignore
         print(f"Starting uvicorn server...")
+        print(f"Server will run until stopped. Press CTRL+C to stop.")
+        # Use run() which blocks and keeps the process alive
         uvicorn.run(
             "app.main:app",
             host="0.0.0.0",
             port=port,
             workers=1,
-            log_level="info"
+            log_level="info",
+            access_log=True
         )
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        sys.exit(0)
     except Exception as e:
         print(f"ERROR: Failed to start server: {e}", file=sys.stderr)
         import traceback

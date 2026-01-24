@@ -34,15 +34,17 @@ export function DashboardHeader() {
               </Link>
             )}
             <ThemeToggle />
-            <Link
-              href="/profile"
-              className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
-            >
-              <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {user?.first_name} {user?.last_name}
-              </span>
-            </Link>
+            {user && (
+              <Link
+                href="/profile"
+                className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+              >
+                <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  {user.first_name} {user.last_name}
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

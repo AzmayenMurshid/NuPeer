@@ -15,8 +15,15 @@ class StorageService:
         self._initialize_client()
     
     def _initialize_client(self):
-        """Initialize S3 client"""
+        """Initialize S3 client - gracefully handles failures without crashing"""
         try:
+            # Only initialize if we have valid-looking credentials
+            if not settings.S3_ACCESS_KEY or settings.S3_ACCESS_KEY == "minioadmin":
+                # Check if we're in production (not localhost endpoint)
+                if settings.S3_ENDPOINT and "localhost" not in settings.S3_ENDPOINT:
+                    print(f"Warning: S3_ACCESS_KEY appears to be default value. Storage may not work in production.")
+                    print(f"Please set S3_ACCESS_KEY and S3_SECRET_KEY in Railway environment variables.")
+            
             self.s3_client = boto3.client(
                 's3',
                 endpoint_url=settings.S3_ENDPOINT,
@@ -26,8 +33,10 @@ class StorageService:
             )
             self._ensure_bucket_exists()
         except Exception as e:
+            # Never crash on storage initialization - just log and continue
             print(f"Warning: Could not initialize storage service: {e}")
             print(f"MinIO/S3 may not be running at {settings.S3_ENDPOINT}")
+            print(f"Application will continue without file storage. Configure S3 credentials to enable file uploads.")
             self.s3_client = None
     
     def _reinitialize_if_needed(self):
@@ -45,7 +54,13 @@ class StorageService:
             try:
                 self.s3_client.create_bucket(Bucket=self.bucket_name)
             except ClientError as e:
-                print(f"Warning: Could not create bucket: {e}")
+                # Don't fail startup if bucket creation fails - just log warning
+                error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                if error_code == 'InvalidAccessKeyId':
+                    print(f"Warning: S3 credentials invalid. Storage will not be available until S3_ACCESS_KEY and S3_SECRET_KEY are configured correctly.")
+                else:
+                    print(f"Warning: Could not create bucket: {e}")
+                # Don't set s3_client to None here - let it try again later
     
     def _check_connection(self):
         """Check if storage service is available"""

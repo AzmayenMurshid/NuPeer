@@ -1,6 +1,25 @@
 import axios from 'axios'
 
+// Get API URL from environment variable
+// In production (Vercel), this MUST be set to your production backend URL
+// Example: https://nupeer-production.up.railway.app
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+// Warn if using localhost in production (browser will block these requests)
+if (typeof window !== 'undefined') {
+  if (API_URL.includes('localhost') || API_URL.includes('127.0.0.1')) {
+    const isProduction = window.location.protocol === 'https:' || 
+                         !window.location.hostname.includes('localhost')
+    if (isProduction) {
+      console.error(
+        '⚠️ API URL is set to localhost but frontend is in production!\n' +
+        'This will cause CORS loopback errors. Please set NEXT_PUBLIC_API_URL ' +
+        'in Vercel environment variables to your production backend URL.\n' +
+        'Current API_URL:', API_URL
+      )
+    }
+  }
+}
 
 export const api = axios.create({
   baseURL: `${API_URL}/api/v1`,

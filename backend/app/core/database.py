@@ -22,10 +22,17 @@ if "localhost" in database_url:
 
 engine = create_engine(
     database_url,
-    pool_pre_ping=True,
+    pool_pre_ping=True,  # Verify connections before using them (prevents stale connections)
     pool_size=10,
     max_overflow=20,
-    connect_args={"connect_timeout": 10}
+    pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
+    pool_reset_on_return='commit',  # Reset connections on return to pool
+    echo=False,  # Set to True for SQL query logging (useful for debugging)
+    connect_args={
+        "connect_timeout": 10,
+        # Server-side keepalive settings (if supported by database)
+        # These are passed as PostgreSQL connection parameters
+    }
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -70,68 +77,102 @@ def _handle_database_error(e: Exception) -> HTTPException:
 
 
 def get_db():
-    """Dependency for getting database session"""
+    """Dependency for getting database session with automatic reconnection"""
+    import time
     db = None
-    try:
-        db = SessionLocal()
+    max_retries = 3
+    
+    # Try to create and test connection with retries
+    for retry_count in range(max_retries):
         try:
-            yield db
+            db = SessionLocal()
+            # Test the connection with a simple query
+            try:
+                db.execute(text("SELECT 1"))
+                break  # Connection is good, exit retry loop
+            except (OperationalError, DisconnectionError) as e:
+                # Connection test failed, close and retry
+                if db:
+                    try:
+                        db.close()
+                    except:
+                        pass
+                    db = None
+                
+                if retry_count == max_retries - 1:
+                    # Last retry failed
+                    raise _handle_database_error(e)
+                
+                # Wait before retrying (exponential backoff)
+                time.sleep(0.5 * (retry_count + 1))
+                continue  # Retry connection
+                
         except (OperationalError, DisconnectionError) as e:
-            if db:
-                try:
-                    db.rollback()
-                except:
-                    pass
-            raise _handle_database_error(e)
-        except Exception as e:
-            if db:
-                try:
-                    db.rollback()
-                except:
-                    pass
-            # Check if it's a psycopg2 error wrapped in the exception
-            if PSYCOPG2_AVAILABLE:
-                # Check if the original exception is a psycopg2 error
-                original_error = getattr(e, 'orig', None)
-                if original_error and isinstance(original_error, Exception):
-                    if "OperationalError" in str(type(original_error)) or "connection" in str(original_error).lower():
-                        raise _handle_database_error(original_error)
-            
-            if isinstance(e, HTTPException):
-                raise
-            
-            # Check if it's a connection-related error even if not OperationalError
-            error_str = str(e).lower()
-            if any(err in error_str for err in ["connection", "refused", "could not connect", "timeout"]):
-                raise _handle_database_error(e)
-            
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database error: {str(e)}"
-            )
-        finally:
+            # Connection error during session creation
             if db:
                 try:
                     db.close()
                 except:
                     pass
+                db = None
+            
+            if retry_count == max_retries - 1:
+                raise _handle_database_error(e)
+            
+            # Wait before retrying
+            time.sleep(0.5 * (retry_count + 1))
+            continue
+    
+    # If we get here, db should be valid
+    if not db:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to establish database connection after retries"
+        )
+    
+    # Yield the session and handle errors
+    try:
+        yield db
     except (OperationalError, DisconnectionError) as e:
-        # Connection error during session creation
+        # Connection error during use
+        if db:
+            try:
+                db.rollback()
+                db.close()
+            except:
+                pass
         raise _handle_database_error(e)
     except Exception as e:
-        # Check for psycopg2 errors during session creation
+        # Other errors during use
+        if db:
+            try:
+                db.rollback()
+            except:
+                pass
+        # Check if it's a psycopg2 error wrapped in the exception
         if PSYCOPG2_AVAILABLE:
             original_error = getattr(e, 'orig', None)
             if original_error and isinstance(original_error, Exception):
                 if "OperationalError" in str(type(original_error)) or "connection" in str(original_error).lower():
                     raise _handle_database_error(original_error)
         
+        if isinstance(e, HTTPException):
+            raise
+        
+        # Check if it's a connection-related error even if not OperationalError
         error_str = str(e).lower()
         if any(err in error_str for err in ["connection", "refused", "could not connect", "timeout"]):
             raise _handle_database_error(e)
         
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database connection error: {str(e)}"
+            detail=f"Database error: {str(e)}"
         )
+    finally:
+        # Always close the session when done
+        if db:
+            try:
+                db.close()
+            except:
+                pass
 
