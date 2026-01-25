@@ -50,10 +50,11 @@ def get_cors_origins() -> List[str]:
     """
     Get and process CORS origins from settings.
     Handles various input formats and ensures localhost is included for development.
+    Also includes domains used for deployment.
     """
     # Get CORS_ORIGINS from settings (should already be a list from config.py validators)
     cors_origins = settings.CORS_ORIGINS
-    
+
     # Handle edge cases where it might still be a string or other type
     if isinstance(cors_origins, str):
         import json
@@ -69,29 +70,34 @@ def get_cors_origins() -> List[str]:
         except (json.JSONDecodeError, ValueError, TypeError) as e:
             logger.warning(f"Failed to parse CORS_ORIGINS as JSON: {e}. Using as single origin.")
             cors_origins = [cors_origins.strip()] if cors_origins.strip() else []
-    
-    # Ensure it's a list
+
+    # Ensure it's a list if all else fails
     if not isinstance(cors_origins, list):
-        cors_origins = ["http://localhost:3000", "http://localhost:3001"]
-    
-    # Normalize origins (remove trailing slashes, duplicates, etc.)
-    cors_origins = normalize_cors_origins(cors_origins)
-    
-    # Always include localhost origins for local development
-    # This allows localhost to work even if CORS_ORIGINS only has production URLs
+        cors_origins = []
+
+    # Explicitly add production/deployment domains here (edit as deployment URLs change)
+    deployment_domains = [
+        "https://nupeer.vercel.app",
+        "https://nupeer.app",
+        "https://www.nupeersite.com",
+        "https://backend.nupeersite.com",
+        # Add any other domains your frontend (or admin) UI is hosted at
+    ]
+
+    # Localhost for development & testing
     localhost_origins = [
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000"
     ]
-    
-    # Add localhost origins if not already present
-    for localhost_origin in localhost_origins:
-        if localhost_origin not in cors_origins:
-            cors_origins.append(localhost_origin)
-    
-    return cors_origins
 
+    # Combine all (will remove duplicates below)
+    cors_origins_extended = cors_origins + deployment_domains + localhost_origins
+
+    # Normalize to remove trailing slashes and duplicates, filter out empty values
+    cors_origins_final = normalize_cors_origins(cors_origins_extended)
+
+    return cors_origins_final
 
 # Process and configure CORS origins
 cors_origins_list = get_cors_origins()
@@ -104,7 +110,7 @@ logger.info(f"CORS Origins count: {len(cors_origins_list)}")
 # max_age=3600 caches preflight responses for 1 hour
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins_list,  # List of allowed origins
+    allow_origins=cors_origins_list,  # List of allowed origins (includes deployment + localhost)
     allow_credentials=True,  # Allow cookies/auth headers
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],  # Allow all headers
@@ -190,6 +196,10 @@ async def debug_cors():
         "cors_origins_type": str(type(settings.CORS_ORIGINS)),
         "cors_origins_list": cors_origins_list,
         "cors_configured": True,
-        "localhost_included": any("localhost" in origin or "127.0.0.1" in origin for origin in cors_origins_list)
+        "localhost_included": any("localhost" in origin or "127.0.0.1" in origin for origin in cors_origins_list),
+        "deployment_origins_included": any(
+            any(domain in origin for domain in ["nupeer.vercel.app", "nupeer.app", "nupeersite.com"])
+            for origin in cors_origins_list
+        ),
     }
 
