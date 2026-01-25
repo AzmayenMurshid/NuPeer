@@ -236,3 +236,103 @@ Then redeploy your frontend. The error will be resolved immediately.
 - `backend/app/main.py` - CORS configuration
 - Vercel Environment Variables - Production configuration
 
+### **Example: Correct CORS Origins Environment Variable**
+
+In your backend project (FastAPI, etc.), set the allowed origins for CORS in your environment variables:
+
+```
+CORS_ORIGINS=https://nu-peer.vercel.app, https://nupeer-production.up.railway.app
+```
+
+This will allow the deployed frontend(s) to access your backend API.  
+**Tip:** The variable name might be `CORS_ORIGINS` or `BACKEND_CORS_ORIGINS` depending on your backend template.
+- Separate multiple origins with commas.
+- Do **not** put `localhost` in production.
+
+**In code, this usually looks like:**
+
+```python
+# In backend/app/main.py or similar
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "https://nu-peer.vercel.app",
+    "https://nupeer-production.up.railway.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+**Always make sure the origins listed exactly match your deployed frontend URLs!**
+
+---
+
+### **Q: Should you set the CORS origins environment variable in Vercel or Railway?**
+
+**A:**  
+- **Set the CORS origins variable in the backend environment—**in this template, that's on **Railway** (or wherever your backend runs).
+- The **frontend (Vercel) does not need to know the allowed origins**, except to use the correct API URL when making requests.
+
+**Where to set `CORS_ORIGINS` or `BACKEND_CORS_ORIGINS`:**
+- If your **backend is deployed on Railway**, add the variable in the Railway dashboard (in your backend service's environment/variables panel).
+- If developing locally, set it in your `.env` file for the backend.
+
+**Why?**  
+- The backend (FastAPI, etc.) enforces CORS—it decides which origins can access the API.
+- The frontend (Vercel, Next.js) just needs to know the API URL, not which origins are allowed.
+
+---
+
+### **Q: How do you access the API URL from your frontend?**
+
+**A:**  
+- In your frontend project (Vercel/Next.js), you need to know the URL of your backend API to make requests.
+
+**How to do it:**
+- Set an environment variable in your frontend, such as `NEXT_PUBLIC_API_URL`, to your backend's deployed API URL (e.g., the Railway or Render app URL for your backend service):
+
+  ```
+  NEXT_PUBLIC_API_URL=https://nupeer-production.up.railway.app
+  ```
+
+- In your frontend code, access this variable:
+
+  ```js
+  // Example in Next.js/React
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  fetch(`${apiUrl}/api/endpoint`)
+    .then(res => res.json())
+    .then(data => console.log(data));
+  ```
+
+**Where to set this:**
+- On Vercel: In the **Project Settings → Environment Variables** panel for your frontend project.
+- In development: In a `.env.local` file in your frontend project root.
+
+**Summary:**
+- Frontend needs `NEXT_PUBLIC_API_URL` variable to know where to send API requests.
+- Backend enforces CORS using `CORS_ORIGINS`.
+- Make sure the URLs and origins exactly match your deployed domains.
+
+---
+
+
+**Summary Table:**
+
+|                                   | Vercel (Frontend)  | Railway (Backend)  |
+|-----------------------------------|--------------------|--------------------|
+| `CORS_ORIGINS` or similar         | ❌ Not needed      | ✅ Set here!        |
+| `NEXT_PUBLIC_API_URL` (API base)  | ✅ Set here if needed | ❌                |
+
+**Bottom line:**  
+> 🟢 **Always set `CORS_ORIGINS` on your backend (Railway), not Vercel.**
+
+If your backend runs somewhere else (e.g., AWS, own server), set `CORS_ORIGINS` in that environment.
+
+---

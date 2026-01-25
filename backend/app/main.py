@@ -54,12 +54,12 @@ logger.info(f"CORS Origins count: {len(cors_origins_list)}")
 # max_age=3600 caches preflight responses for 1 hour
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins_list,
-    allow_credentials=True,
+    allow_origins=cors_origins_list,  # List of allowed origins
+    allow_credentials=True,  # Allow cookies/auth headers
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,  # Cache preflight requests for 1 hour
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers to client
+    max_age=3600,  # Cache preflight responses for 1 hour
 )
 
 # Include routers
@@ -72,7 +72,6 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytic
 app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["Calendar"])
 app.include_router(mentorship.router, prefix="/api/v1/mentorship", tags=["Mentorship"])
 app.include_router(points.router, prefix="/api/v1", tags=["Points"])
-
 
 @app.on_event("startup")
 async def startup_event():
