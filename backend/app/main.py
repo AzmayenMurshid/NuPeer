@@ -4,6 +4,7 @@ NuPeer - Main FastAPI Application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from typing import List
 from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, calendar, mentorship, points
 from app.core.config import settings
 
@@ -19,15 +20,96 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
+def normalize_cors_origins(origins: List[str]) -> List[str]:
+    """
+    Normalize CORS origins by:
+    - Converting all to strings
+    - Removing trailing slashes
+    - Removing duplicates while preserving order
+    - Filtering out empty values
+    """
+    normalized = []
+    seen = set()
+    
+    for origin in origins:
+        if not origin:
+            continue
+        
+        # Convert to string and clean
+        origin_str = str(origin).strip().rstrip('/')
+        
+        # Skip empty strings and add to seen set
+        if origin_str and origin_str not in seen:
+            normalized.append(origin_str)
+            seen.add(origin_str)
+    
+    return normalized
+
+
+def get_cors_origins() -> List[str]:
+    """
+    Get and process CORS origins from settings.
+    Handles various input formats and ensures localhost is included for development.
+    """
+    # Get CORS_ORIGINS from settings (should already be a list from config.py validators)
+    cors_origins = settings.CORS_ORIGINS
+    
+    # Handle edge cases where it might still be a string or other type
+    if isinstance(cors_origins, str):
+        import json
+        try:
+            # Try parsing as JSON array first
+            if cors_origins.strip().startswith('['):
+                cors_origins = json.loads(cors_origins)
+            # Otherwise, treat as comma-separated string
+            elif ',' in cors_origins:
+                cors_origins = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+            else:
+                cors_origins = [cors_origins.strip()] if cors_origins.strip() else []
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
+            logger.warning(f"Failed to parse CORS_ORIGINS as JSON: {e}. Using as single origin.")
+            cors_origins = [cors_origins.strip()] if cors_origins.strip() else []
+    
+    # Ensure it's a list
+    if not isinstance(cors_origins, list):
+        cors_origins = ["http://localhost:3000", "http://localhost:3001"]
+    
+    # Normalize origins (remove trailing slashes, duplicates, etc.)
+    cors_origins = normalize_cors_origins(cors_origins)
+    
+    # Always include localhost origins for local development
+    # This allows localhost to work even if CORS_ORIGINS only has production URLs
+    localhost_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000"
+    ]
+    
+    # Add localhost origins if not already present
+    for localhost_origin in localhost_origins:
+        if localhost_origin not in cors_origins:
+            cors_origins.append(localhost_origin)
+    
+    return cors_origins
+
+
+# Process and configure CORS origins
+cors_origins_list = get_cors_origins()
+
+# Log CORS configuration for debugging
+logger.info(f"CORS Origins configured: {cors_origins_list}")
+logger.info(f"CORS Origins count: {len(cors_origins_list)}")
+
 # CORS middleware - must be added before routers
+# max_age=3600 caches preflight responses for 1 hour
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=cors_origins_list,  # List of allowed origins
+    allow_credentials=True,  # Allow cookies/auth headers
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers to client
+    max_age=3600,  # Cache preflight responses for 1 hour
 )
 
 # Include routers
@@ -100,4 +182,14 @@ async def health_check():
         }
 
 
+@app.get("/debug/cors")
+async def debug_cors():
+    """Debug endpoint to check CORS configuration"""
+    return {
+        "cors_origins_raw": settings.CORS_ORIGINS,
+        "cors_origins_type": str(type(settings.CORS_ORIGINS)),
+        "cors_origins_list": cors_origins_list,
+        "cors_configured": True,
+        "localhost_included": any("localhost" in origin or "127.0.0.1" in origin for origin in cors_origins_list)
+    }
 
