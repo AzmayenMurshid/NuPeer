@@ -38,8 +38,13 @@ for origin in localhost_origins:
     if origin not in cors_origins_list:
         cors_origins_list.append(origin)
 
-# Ensure all origins are strings and remove duplicates
-cors_origins_list = list(dict.fromkeys([str(origin).strip() for origin in cors_origins_list if origin]))
+# Ensure all origins are strings, remove trailing slashes, and remove duplicates
+# Trailing slashes can cause CORS mismatches (e.g., https://example.com/ vs https://example.com)
+cors_origins_list = list(dict.fromkeys([
+    str(origin).strip().rstrip('/')  # Remove trailing slashes
+    for origin in cors_origins_list 
+    if origin
+]))
 
 # Log CORS origins for debugging
 logger.info(f"CORS Origins configured: {cors_origins_list}")
