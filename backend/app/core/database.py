@@ -15,10 +15,35 @@ try:
 except ImportError:
     PSYCOPG2_AVAILABLE = False
 
-# Force IPv4 connection by using 127.0.0.1 instead of localhost if needed
+# Normalize DATABASE_URL - fix common issues
 database_url = settings.DATABASE_URL
+
+# Fix: Replace https:// with postgresql:// (common mistake)
+# SQLAlchemy expects postgresql:// or postgres://, not https://
+if database_url.startswith("https://"):
+    database_url = database_url.replace("https://", "postgresql://", 1)
+elif database_url.startswith("http://"):
+    database_url = database_url.replace("http://", "postgresql://", 1)
+
+# Force IPv4 connection by using 127.0.0.1 instead of localhost if needed
 if "localhost" in database_url:
     database_url = database_url.replace("localhost", "127.0.0.1")
+
+# Check if DATABASE_URL already has SSL parameters
+# Railway PostgreSQL requires SSL, so add sslmode if not present
+if "sslmode" not in database_url.lower():
+    # Check if this looks like a Railway or production database
+    is_production = (
+        "railway" in database_url.lower() or
+        "amazonaws.com" in database_url.lower() or
+        "heroku" in database_url.lower() or
+        "render.com" in database_url.lower()
+    )
+    
+    if is_production:
+        # Production databases (Railway, AWS RDS, etc.) require SSL
+        separator = "&" if "?" in database_url else "?"
+        database_url = f"{database_url}{separator}sslmode=require"
 
 engine = create_engine(
     database_url,
@@ -30,8 +55,7 @@ engine = create_engine(
     echo=False,  # Set to True for SQL query logging (useful for debugging)
     connect_args={
         "connect_timeout": 10,
-        # Server-side keepalive settings (if supported by database)
-        # These are passed as PostgreSQL connection parameters
+        # SSL will be handled via sslmode in the connection string
     }
 )
 

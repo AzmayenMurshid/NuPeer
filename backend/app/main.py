@@ -71,14 +71,34 @@ app.include_router(points.router, prefix="/api/v1", tags=["Points"])
 
 @app.on_event("startup")
 async def startup_event():
-    """Log startup information - storage is optional"""
-    from app.core.storage import storage_service
-    if storage_service.s3_client:
-        logger.info("Storage service: Available")
-    else:
-        # Use DEBUG level for optional service warnings - reduces log noise
-        logger.debug("Storage service: Not available (S3 credentials not configured or invalid)")
-        logger.debug("Application will continue - file uploads will fail until S3 is configured")
+    """Log startup information - storage and database are checked"""
+    logger.info("=== Application Startup ===")
+    
+    # Check database connection (non-blocking, just log status)
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("✓ Database: Connected")
+    except Exception as e:
+        logger.warning(f"⚠ Database: Connection failed - {str(e)}")
+        logger.warning("  Application will start, but database operations will fail")
+        logger.warning("  Check DATABASE_URL environment variable in Railway")
+    
+    # Check storage service (optional)
+    try:
+        from app.core.storage import storage_service
+        if storage_service.s3_client:
+            logger.info("✓ Storage service: Available")
+        else:
+            logger.debug("Storage service: Not available (S3 credentials not configured or invalid)")
+            logger.debug("Application will continue - file uploads will fail until S3 is configured")
+    except Exception as e:
+        logger.debug(f"Storage service: Error checking - {str(e)}")
+        logger.debug("Application will continue - storage is optional")
+    
+    logger.info("=== Application Startup Complete ===")
 
 
 @app.get("/")
