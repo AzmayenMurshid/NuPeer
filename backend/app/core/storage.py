@@ -44,10 +44,51 @@ class StorageService:
         if self.s3_client is None:
             self._initialize_client()
     
+    def _validate_bucket_name(self, bucket_name: str) -> bool:
+        """Validate S3 bucket name according to AWS rules"""
+        if not bucket_name:
+            return False
+        
+        # S3 bucket name rules:
+        # - 3-63 characters
+        # - Only lowercase letters, numbers, dots, and hyphens
+        # - Must start and end with a letter or number
+        # - Cannot be formatted as an IP address
+        # - Cannot contain consecutive dots
+        
+        if len(bucket_name) < 3 or len(bucket_name) > 63:
+            return False
+        
+        # Check for valid characters
+        import re
+        if not re.match(r'^[a-z0-9][a-z0-9.-]*[a-z0-9]$', bucket_name):
+            return False
+        
+        # Cannot contain consecutive dots
+        if '..' in bucket_name:
+            return False
+        
+        # Cannot be formatted as IP address
+        if re.match(r'^\d+\.\d+\.\d+\.\d+$', bucket_name):
+            return False
+        
+        return True
+    
     def _ensure_bucket_exists(self):
         """Create bucket if it doesn't exist"""
         if not self.s3_client:
             return
+        
+        # Validate bucket name first
+        if not self._validate_bucket_name(self.bucket_name):
+            error_msg = (
+                f"Invalid bucket name: '{self.bucket_name}'. "
+                "S3 bucket names must be 3-63 characters, contain only lowercase letters, numbers, dots, and hyphens, "
+                "and must start and end with a letter or number."
+            )
+            print(f"Warning: {error_msg}")
+            raise ValueError(error_msg)
+        
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
         except ClientError:
@@ -56,10 +97,15 @@ class StorageService:
             except ClientError as e:
                 # Don't fail startup if bucket creation fails - just log warning
                 error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+                error_message = e.response.get('Error', {}).get('Message', str(e))
+                
                 if error_code == 'InvalidAccessKeyId':
                     print(f"Warning: S3 credentials invalid. Storage will not be available until S3_ACCESS_KEY and S3_SECRET_KEY are configured correctly.")
+                elif error_code == 'InvalidBucketName':
+                    print(f"Warning: Invalid bucket name '{self.bucket_name}': {error_message}")
+                    print(f"  Bucket names must be 3-63 characters, lowercase, and follow AWS naming rules.")
                 else:
-                    print(f"Warning: Could not create bucket: {e}")
+                    print(f"Warning: Could not create bucket: {error_code} - {error_message}")
                 # Don't set s3_client to None here - let it try again later
     
     def _check_connection(self):
@@ -78,6 +124,15 @@ class StorageService:
         self._reinitialize_if_needed()
         self._check_connection()
         
+        # Validate bucket name before attempting upload
+        if not self._validate_bucket_name(self.bucket_name):
+            raise ValueError(
+                f"Invalid bucket name: '{self.bucket_name}'. "
+                "S3 bucket names must be 3-63 characters, contain only lowercase letters, numbers, dots, and hyphens, "
+                "and must start and end with a letter or number. "
+                f"Please check S3_BUCKET_NAME environment variable in Railway."
+            )
+        
         file_key = f"transcripts/{user_id}/{uuid.uuid4()}/{filename}"
         
         try:
@@ -89,12 +144,33 @@ class StorageService:
             )
             return file_key
         except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_message = e.response.get('Error', {}).get('Message', str(e))
+            
+            # Provide more specific error messages
+            if error_code == 'InvalidBucketName':
+                raise ValueError(
+                    f"Invalid bucket name: '{self.bucket_name}'. {error_message}. "
+                    "Please check S3_BUCKET_NAME environment variable in Railway. "
+                    "Bucket names must be 3-63 characters, lowercase, and follow AWS naming rules."
+                )
+            elif error_code == 'NoSuchBucket':
+                raise ConnectionError(
+                    f"Bucket '{self.bucket_name}' does not exist. "
+                    f"Please create the bucket in your S3 service or check S3_BUCKET_NAME in Railway."
+                )
+            elif error_code == 'InvalidAccessKeyId' or error_code == 'SignatureDoesNotMatch':
+                raise ConnectionError(
+                    f"S3 credentials are invalid. Please check S3_ACCESS_KEY and S3_SECRET_KEY in Railway."
+                )
+            
             # Try to reinitialize and retry once
             self.s3_client = None
             self._reinitialize_if_needed()
             if self.s3_client is None:
                 raise ConnectionError(
-                    f"Storage service not available. Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+                    f"Storage service not available. Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}. "
+                    f"Check S3_ENDPOINT, S3_ACCESS_KEY, and S3_SECRET_KEY environment variables in Railway."
                 )
             try:
                 self.s3_client.put_object(
@@ -105,9 +181,18 @@ class StorageService:
                 )
                 return file_key
             except ClientError as retry_error:
+                retry_error_code = retry_error.response.get('Error', {}).get('Code', 'Unknown')
+                retry_error_message = retry_error.response.get('Error', {}).get('Message', str(retry_error))
+                
+                if retry_error_code == 'InvalidBucketName':
+                    raise ValueError(
+                        f"Invalid bucket name: '{self.bucket_name}'. {retry_error_message}. "
+                        "Please check S3_BUCKET_NAME environment variable in Railway."
+                    )
+                
                 raise ConnectionError(
-                    f"Failed to upload file to storage: {str(retry_error)}. "
-                    f"Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+                    f"Failed to upload file to storage: {retry_error_code} - {retry_error_message}. "
+                    f"Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT} and check your S3 configuration in Railway."
                 )
     
     def download_file(self, file_key: str) -> Optional[bytes]:

@@ -22,6 +22,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Only load Analytics in production (Vercel)
+  const isProduction = process.env.NODE_ENV === 'production'
+  const isVercel = process.env.NEXT_PUBLIC_VERCEL === '1' || 
+                   typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -35,7 +40,8 @@ export default function RootLayout({
           </div>
           <BottomNav />
         </Providers>
-        <Analytics />
+        {/* Only load Analytics in production/Vercel to avoid 404 errors */}
+        {(isProduction || isVercel) && <Analytics />}
       </body>
     </html>
   )
