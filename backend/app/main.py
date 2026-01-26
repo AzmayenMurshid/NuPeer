@@ -131,8 +131,52 @@ app.include_router(points.router, prefix="/api/v1", tags=["Points"])
 
 @app.on_event("startup")
 async def startup_event():
-    """Log startup information - storage and database are checked"""
+    """Log startup information - storage and database are checked, migrations are run"""
     logger.info("=== Application Startup ===")
+    
+    # Run database migrations first (before checking connection)
+    try:
+        from alembic.config import Config
+        from alembic import command
+        import os
+        
+        # Get DATABASE_URL from environment (alembic.ini will be overridden)
+        database_url = os.getenv("DATABASE_URL", "")
+        if database_url:
+            # Normalize DATABASE_URL for Alembic
+            if database_url.startswith("https://"):
+                database_url = database_url.replace("https://", "postgresql://", 1)
+            elif database_url.startswith("http://"):
+                database_url = database_url.replace("http://", "postgresql://", 1)
+            
+            # Add sslmode if not present and it's a production database
+            if "sslmode" not in database_url.lower():
+                is_production = (
+                    "railway" in database_url.lower() or
+                    "amazonaws.com" in database_url.lower() or
+                    "heroku" in database_url.lower() or
+                    "render.com" in database_url.lower()
+                )
+                if is_production:
+                    separator = "&" if "?" in database_url else "?"
+                    database_url = f"{database_url}{separator}sslmode=require"
+            
+            # Configure Alembic
+            alembic_cfg = Config("alembic.ini")
+            alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+            
+            # Run migrations
+            logger.info("Running database migrations...")
+            command.upgrade(alembic_cfg, "head")
+            logger.info("✓ Database migrations: Applied")
+        else:
+            logger.warning("⚠ DATABASE_URL not set, skipping migrations")
+    except Exception as e:
+        logger.error(f"⚠ Database migrations failed: {str(e)}")
+        logger.error("  Tables may not exist. Check DATABASE_URL and migration files.")
+        logger.error("  Application will start, but database operations may fail")
+        import traceback
+        logger.debug(traceback.format_exc())
     
     # Check database connection (non-blocking, just log status)
     try:

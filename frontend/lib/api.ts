@@ -3,7 +3,26 @@ import axios from 'axios'
 // Get API URL from environment variable
 // In production (Vercel), this MUST be set to your production backend URL
 // Example: https://nupeer-production.up.railway.app
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+let API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+// Ensure API_URL has a protocol (http:// or https://)
+// If missing, assume https:// for production, http:// for localhost
+if (!API_URL.match(/^https?:\/\//)) {
+  // If it's a domain (contains .), assume https://
+  if (API_URL.includes('.') && !API_URL.includes('localhost')) {
+    API_URL = `https://${API_URL}`
+  } else {
+    // Otherwise assume http:// (for localhost)
+    API_URL = `http://${API_URL}`
+  }
+  console.warn(
+    `⚠️ NEXT_PUBLIC_API_URL was missing protocol. Auto-corrected to: ${API_URL}\n` +
+    'Please update Vercel environment variable to include https://'
+  )
+}
+
+// Remove trailing slashes
+API_URL = API_URL.replace(/\/+$/, '')
 
 // Warn if using localhost in production (browser will block these requests)
 if (typeof window !== 'undefined') {

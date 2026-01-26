@@ -230,8 +230,25 @@ async def login(
     except Exception as e:
         # Log the error for debugging
         import logging
+        import traceback
         logger = logging.getLogger(__name__)
-        logger.error(f"Login error: {str(e)}", exc_info=True)
+        error_traceback = traceback.format_exc()
+        logger.error(f"Login error: {str(e)}\n{error_traceback}", exc_info=True)
+        
+        # Check for common issues and provide more specific error messages
+        error_str = str(e).lower()
+        if "database" in error_str or "connection" in error_str or "operationalerror" in error_str:
+            logger.error("Database connection error detected during login")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database connection error. Please try again later."
+            )
+        elif "secret_key" in error_str or "jwt" in error_str:
+            logger.error("JWT/SECRET_KEY error detected during login")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication service error. Please contact support."
+            )
         
         # Return a generic error message to avoid leaking internal details
         raise HTTPException(
