@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface HelpRequest {
   id: string
@@ -90,8 +91,16 @@ export const useHelpRequests = () => {
   return useQuery<HelpRequest[]>({
     queryKey: ['help-requests'],
     queryFn: async () => {
-      const response = await api.get('/help-requests')
-      return response.data
+      if (shouldUseDemoData()) {
+        return getDemoDataAsync(getDemoData().helpRequests)
+      }
+      try {
+        const response = await api.get('/help-requests')
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        return getDemoDataAsync(getDemoData().helpRequests)
+      }
     },
   })
 }
@@ -115,8 +124,18 @@ export const useRecommendations = (requestId: string | null) => {
     queryKey: ['recommendations', requestId],
     queryFn: async () => {
       if (!requestId) return []
-      const response = await api.get(`/recommendations/${requestId}`)
-      return response.data
+      if (shouldUseDemoData()) {
+        const recommendations = getDemoData().recommendations[requestId as keyof typeof getDemoData().recommendations] || []
+        return getDemoDataAsync(recommendations)
+      }
+      try {
+        const response = await api.get(`/recommendations/${requestId}`)
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        const recommendations = getDemoData().recommendations[requestId as keyof typeof getDemoData().recommendations] || []
+        return getDemoDataAsync(recommendations)
+      }
     },
     enabled: !!requestId,
   })
@@ -126,8 +145,16 @@ export const usePreviousTutors = () => {
   return useQuery<PreviousTutor[]>({
     queryKey: ['previous-tutors'],
     queryFn: async () => {
-      const response = await api.get('/recommendations/previous-tutors')
-      return response.data
+      if (shouldUseDemoData()) {
+        return getDemoDataAsync(getDemoData().previousTutors)
+      }
+      try {
+        const response = await api.get('/recommendations/previous-tutors')
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        return getDemoDataAsync(getDemoData().previousTutors)
+      }
     },
   })
 }
@@ -136,8 +163,16 @@ export const useConnectedBrothers = () => {
   return useQuery<ConnectedBrother[]>({
     queryKey: ['connected-brothers'],
     queryFn: async () => {
-      const response = await api.get('/recommendations/connected-brothers')
-      return response.data
+      if (shouldUseDemoData()) {
+        return getDemoDataAsync(getDemoData().connectedBrothers)
+      }
+      try {
+        const response = await api.get('/recommendations/connected-brothers')
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        return getDemoDataAsync(getDemoData().connectedBrothers)
+      }
     },
   })
 }
@@ -163,13 +198,17 @@ export const useMajorMatchBrothers = (limit: number = 10) => {
   return useQuery<MajorMatchBrother[]>({
     queryKey: ['major-match-brothers', limit],
     queryFn: async () => {
+      if (shouldUseDemoData()) {
+        const data = getDemoData().majorMatchBrothers.slice(0, limit)
+        return getDemoDataAsync(data)
+      }
       try {
         const response = await api.get(`/recommendations/by-major?limit=${limit}`)
         return response.data || []
       } catch (error: any) {
-        console.error('Error fetching major match brothers:', error)
-        // Return empty array on error instead of throwing
-        return []
+        console.warn('API failed, using demo data:', error)
+        const data = getDemoData().majorMatchBrothers.slice(0, limit)
+        return getDemoDataAsync(data)
       }
     },
     retry: 1,
@@ -183,13 +222,17 @@ export const useGroupStudyBrothers = (limit: number = 10) => {
   return useQuery<GroupStudyBrother[]>({
     queryKey: ['group-study-brothers', limit],
     queryFn: async () => {
+      if (shouldUseDemoData()) {
+        const data = getDemoData().groupStudyBrothers.slice(0, limit)
+        return getDemoDataAsync(data)
+      }
       try {
         const response = await api.get(`/recommendations/group-study?limit=${limit}`)
         return response.data || []
       } catch (error: any) {
-        console.error('Error fetching group study brothers:', error)
-        // Return empty array on error instead of throwing
-        return []
+        console.warn('API failed, using demo data:', error)
+        const data = getDemoData().groupStudyBrothers.slice(0, limit)
+        return getDemoDataAsync(data)
       }
     },
     retry: 1,

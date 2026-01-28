@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 // Types
 export interface AlumniProfile {
@@ -262,15 +263,46 @@ export const useSearchMentors = (filters?: {
   return useQuery({
     queryKey: ['searchMentors', filters],
     queryFn: async () => {
-      const params = new URLSearchParams()
-      if (filters?.industry) params.append('industry', filters.industry)
-      if (filters?.major) params.append('major', filters.major)
-      if (filters?.location) params.append('location', filters.location)
-      
-      const response = await api.get<MentorSearchResult[]>(
-        `/mentorship/search/mentors?${params.toString()}`
-      )
-      return response.data
+      if (shouldUseDemoData()) {
+        const profiles = getDemoData().alumniProfiles.filter(p => p.is_mentor)
+        let filtered = profiles
+        if (filters?.industry) {
+          filtered = filtered.filter(p => p.industry?.toLowerCase().includes(filters.industry!.toLowerCase()))
+        }
+        if (filters?.location) {
+          filtered = filtered.filter(p => p.location?.toLowerCase().includes(filters.location!.toLowerCase()))
+        }
+        const results: MentorSearchResult[] = filtered.map(p => ({
+          alumni_profile: p,
+          user: { id: p.user_id, first_name: "John", last_name: "Smith", email: "john.smith@demo.nupeer.com", major: "Computer Science", graduation_year: 2020 },
+          experiences: [],
+          resume_count: 1,
+          match_score: 0.85
+        }))
+        return getDemoDataAsync(results)
+      }
+      try {
+        const params = new URLSearchParams()
+        if (filters?.industry) params.append('industry', filters.industry)
+        if (filters?.major) params.append('major', filters.major)
+        if (filters?.location) params.append('location', filters.location)
+        
+        const response = await api.get<MentorSearchResult[]>(
+          `/mentorship/search/mentors?${params.toString()}`
+        )
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        const profiles = getDemoData().alumniProfiles.filter(p => p.is_mentor)
+        const results: MentorSearchResult[] = profiles.map(p => ({
+          alumni_profile: p,
+          user: { id: p.user_id, first_name: "John", last_name: "Smith", email: "john.smith@demo.nupeer.com", major: "Computer Science", graduation_year: 2020 },
+          experiences: [],
+          resume_count: 1,
+          match_score: 0.85
+        }))
+        return getDemoDataAsync(results)
+      }
     },
     enabled,
     retry: false,
@@ -304,8 +336,16 @@ export const useMentorshipRequests = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['mentorshipRequests'],
     queryFn: async () => {
-      const response = await api.get<MentorshipRequest[]>('/mentorship/requests')
-      return response.data
+      if (shouldUseDemoData()) {
+        return getDemoDataAsync(getDemoData().mentorshipRequests)
+      }
+      try {
+        const response = await api.get<MentorshipRequest[]>('/mentorship/requests')
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        return getDemoDataAsync(getDemoData().mentorshipRequests)
+      }
     },
     enabled,
     retry: false,

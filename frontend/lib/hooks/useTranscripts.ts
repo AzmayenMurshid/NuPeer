@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface Transcript {
   id: string
@@ -15,8 +16,16 @@ export const useTranscripts = () => {
   return useQuery<Transcript[]>({
     queryKey: ['transcripts'],
     queryFn: async () => {
-      const response = await api.get('/transcripts')
-      return response.data
+      if (shouldUseDemoData()) {
+        return getDemoDataAsync(getDemoData().transcripts)
+      }
+      try {
+        const response = await api.get('/transcripts')
+        return response.data
+      } catch (error) {
+        console.warn('API failed, using demo data:', error)
+        return getDemoDataAsync(getDemoData().transcripts)
+      }
     },
   })
 }
