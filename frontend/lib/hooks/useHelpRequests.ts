@@ -125,7 +125,8 @@ export const useRecommendations = (requestId: string | null) => {
     queryFn: async () => {
       if (!requestId) return []
       if (shouldUseDemoData()) {
-        const recommendations = getDemoData().recommendations[requestId as keyof typeof getDemoData().recommendations] || []
+        const demoData = getDemoData()
+        const recommendations = (demoData.recommendations as Record<string, Recommendation[]>)[requestId] || []
         return getDemoDataAsync(recommendations)
       }
       try {
@@ -133,7 +134,8 @@ export const useRecommendations = (requestId: string | null) => {
         return response.data
       } catch (error) {
         console.warn('API failed, using demo data:', error)
-        const recommendations = getDemoData().recommendations[requestId as keyof typeof getDemoData().recommendations] || []
+        const demoData = getDemoData()
+        const recommendations = (demoData.recommendations as Record<string, Recommendation[]>)[requestId] || []
         return getDemoDataAsync(recommendations)
       }
     },
