@@ -17,6 +17,12 @@ class StorageService:
     def _initialize_client(self):
         """Initialize S3 client - gracefully handles failures without crashing"""
         try:
+            # If storage isn't configured, don't attempt initialization
+            # (especially important in production so we don't default to localhost)
+            if not settings.S3_ENDPOINT or not settings.S3_ACCESS_KEY or not settings.S3_SECRET_KEY:
+                self.s3_client = None
+                return
+
             # Only initialize if we have valid-looking credentials
             if not settings.S3_ACCESS_KEY or settings.S3_ACCESS_KEY == "minioadmin":
                 # Check if we're in production (not localhost endpoint)
@@ -24,12 +30,15 @@ class StorageService:
                     print(f"Warning: S3_ACCESS_KEY appears to be default value. Storage may not work in production.")
                     print(f"Please set S3_ACCESS_KEY and S3_SECRET_KEY in Railway environment variables.")
             
+            # If you want AWS S3, set:
+            # - S3_ENDPOINT=https://s3.amazonaws.com (or regional endpoint)
+            # - S3_ACCESS_KEY / S3_SECRET_KEY
+            # For MinIO, set endpoint to your MinIO URL.
             self.s3_client = boto3.client(
-                's3',
-                endpoint_url=settings.S3_ENDPOINT,
+                "s3",
+                endpoint_url=settings.S3_ENDPOINT or None,
                 aws_access_key_id=settings.S3_ACCESS_KEY,
                 aws_secret_access_key=settings.S3_SECRET_KEY,
-                use_ssl=settings.S3_USE_SSL
             )
             self._ensure_bucket_exists()
         except Exception as e:
@@ -111,8 +120,13 @@ class StorageService:
     def _check_connection(self):
         """Check if storage service is available"""
         if not self.s3_client:
+            if not settings.S3_ENDPOINT or not settings.S3_ACCESS_KEY or not settings.S3_SECRET_KEY:
+                raise ConnectionError(
+                    "Storage service not configured. Set S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, "
+                    "and S3_BUCKET_NAME in your deployment environment (e.g., Railway Variables)."
+                )
             raise ConnectionError(
-                f"Storage service not available. Please ensure MinIO/S3 is running at {settings.S3_ENDPOINT}"
+                f"Storage service not available. Please ensure MinIO/S3 is reachable at {settings.S3_ENDPOINT}"
             )
     
     def upload_file(self, file_content: bytes, user_id: str, filename: str) -> str:

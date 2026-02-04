@@ -6,11 +6,11 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.core.storage import storage_service
 from app.services.pdf_processor import pdf_processor
 from app.models.transcript import Transcript
 from app.models.course import Course
 import uuid
+from typing import Optional
 
 celery_app = Celery(
     "nupeer",
@@ -18,11 +18,24 @@ celery_app = Celery(
     backend=settings.REDIS_URL
 )
 
+# Configure Celery to use pickle serializer for binary data (PDF content)
+celery_app.conf.update(
+    task_serializer='pickle',
+    accept_content=['pickle', 'json'],
+    result_serializer='pickle',
+    result_accept_content=['pickle', 'json']
+)
 
-def _process_transcript_internal(transcript_id: str, user_id: str):
+
+def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: Optional[bytes] = None):
     """
     Internal function to process transcript PDF
     This can be called directly or via Celery task
+    
+    Args:
+        transcript_id: UUID of the transcript record
+        user_id: UUID of the user
+        pdf_content: PDF file content as bytes (required, no longer downloaded from storage)
     """
     db = SessionLocal()
     try:
@@ -30,6 +43,13 @@ def _process_transcript_internal(transcript_id: str, user_id: str):
         transcript = db.query(Transcript).filter(Transcript.id == uuid.UUID(transcript_id)).first()
         if not transcript:
             return {"status": "error", "message": "Transcript not found"}
+        
+        # Validate PDF content is provided
+        if not pdf_content:
+            transcript.processing_status = "failed"
+            transcript.error_message = "PDF content is required for processing"
+            db.commit()
+            return {"status": "error", "message": "PDF content is required"}
         
         # Check if transcript has been pending for too long
         if transcript.processing_status == "pending":
@@ -60,14 +80,6 @@ def _process_transcript_internal(transcript_id: str, user_id: str):
         # Update status to processing
         transcript.processing_status = "processing"
         db.commit()
-        
-        # Download PDF from storage
-        pdf_content = storage_service.download_file(transcript.file_path)
-        if not pdf_content:
-            transcript.processing_status = "failed"
-            transcript.error_message = "Failed to download file from storage"
-            db.commit()
-            return {"status": "error", "message": "Failed to download file"}
         
         # Process PDF
         try:
@@ -258,9 +270,14 @@ def _process_transcript_internal(transcript_id: str, user_id: str):
 
 
 @celery_app.task(name="process_transcript")
-def process_transcript_task(transcript_id: str, user_id: str):
+def process_transcript_task(transcript_id: str, user_id: str, pdf_content: bytes):
     """
     Celery task wrapper for processing transcript PDF
+    
+    Args:
+        transcript_id: UUID of the transcript record
+        user_id: UUID of the user
+        pdf_content: PDF file content as bytes
     """
-    return _process_transcript_internal(transcript_id, user_id)
+    return _process_transcript_internal(transcript_id, user_id, pdf_content)
 

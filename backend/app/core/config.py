@@ -1,6 +1,7 @@
 """
 Application Configuration
 """
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 from typing import List, Union
@@ -65,11 +66,59 @@ class Settings(BaseSettings):
         return [str(v)]
     
     # Object Storage (MinIO/S3)
-    S3_ENDPOINT: str = "http://localhost:9000"
-    S3_ACCESS_KEY: str = "minioadmin"
-    S3_SECRET_KEY: str = "minioadmin"
+    # NOTE:
+    # - In local dev, we default to local MinIO.
+    # - In Railway/production, we default to EMPTY so deployments don't accidentally try localhost:9000.
+    S3_ENDPOINT: str = ""
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
     S3_BUCKET_NAME: str = "nupeer-transcripts"
     S3_USE_SSL: bool = False
+
+    @staticmethod
+    def _is_railway() -> bool:
+        return bool(
+            os.getenv("RAILWAY_ENVIRONMENT")
+            or os.getenv("RAILWAY_PROJECT_ID")
+            or os.getenv("RAILWAY_SERVICE_ID")
+            or os.getenv("RAILWAY_STATIC_URL")
+        )
+
+    @field_validator("S3_ENDPOINT", mode="before")
+    @classmethod
+    def default_s3_endpoint(cls, v):
+        if v:
+            return v
+        # Local development default
+        if not cls._is_railway():
+            return "http://localhost:9000"
+        # Railway default: empty => forces explicit config
+        return ""
+
+    @field_validator("S3_ACCESS_KEY", mode="before")
+    @classmethod
+    def default_s3_access_key(cls, v):
+        if v:
+            return v
+        # Allow AWS-standard env vars as a fallback
+        aws_key = os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_ACCESS_KEY")
+        if aws_key:
+            return aws_key
+        if not cls._is_railway():
+            return "minioadmin"
+        return ""
+
+    @field_validator("S3_SECRET_KEY", mode="before")
+    @classmethod
+    def default_s3_secret_key(cls, v):
+        if v:
+            return v
+        aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_KEY")
+        if aws_secret:
+            return aws_secret
+        if not cls._is_railway():
+            return "minioadmin"
+        return ""
     
     # Redis (for Celery)
     REDIS_URL: str = "redis://localhost:6379/0"

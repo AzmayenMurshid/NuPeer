@@ -9,12 +9,12 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from uuid import UUID
 from app.core.database import get_db
-from app.core.storage import storage_service
 from app.core.config import settings
 from app.models.transcript import Transcript
 from app.models.user import User
 from app.api.v1.auth import get_current_user
 from app.tasks.process_transcript import process_transcript_task, _process_transcript_internal
+from app.services.pdf_processor import pdf_processor
 from sqlalchemy import func
 
 router = APIRouter()
@@ -92,45 +92,16 @@ async def upload_transcript(
     if existing_transcripts:
         print(f"Deleting {len(existing_transcripts)} previous transcript(s) for user {current_user.id}")
         for old_transcript in existing_transcripts:
-            try:
-                # Delete from storage
-                storage_service.delete_file(old_transcript.file_path)
-            except Exception as storage_error:
-                # Log but don't fail if storage deletion fails
-                print(f"Warning: Could not delete old transcript file from storage: {storage_error}")
-            
             # Delete from database (cascade will delete associated courses)
             db.delete(old_transcript)
         
         db.commit()
         print("Previous transcripts deleted successfully")
     
-    # Upload to object storage
-    try:
-        file_path = storage_service.upload_file(
-            content,
-            str(current_user.id),
-            file.filename
-        )
-    except ConnectionError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e)
-        )
-    except Exception as e:
-        # Log the full error for debugging
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Upload error: {error_details}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload file: {str(e)}"
-        )
-    
-    # Create transcript record
+    # Create transcript record (no file_path needed, we parse directly)
     transcript = Transcript(
         user_id=current_user.id,
-        file_path=file_path,
+        file_path=None,  # No longer storing files in MINIO
         file_name=file.filename,
         file_size=file_size,
         processing_status="pending"
@@ -140,7 +111,7 @@ async def upload_transcript(
     db.commit()
     db.refresh(transcript)
     
-    # Process transcript (try Celery first, fallback to synchronous)
+    # Process transcript immediately with PDF content (try Celery first, fallback to synchronous)
     # Check if Redis is available before trying Celery
     celery_available = False
     try:
@@ -165,7 +136,8 @@ async def upload_transcript(
         
         # Redis is available, try Celery
         try:
-            process_transcript_task.delay(str(transcript.id), str(current_user.id))
+            # Pass PDF content directly to Celery task
+            process_transcript_task.delay(str(transcript.id), str(current_user.id), content)
             celery_available = True
             print(f"Transcript processing queued successfully (Celery)")
         except Exception as celery_error:
@@ -180,9 +152,9 @@ async def upload_transcript(
     # This ensures transcripts are processed even when Redis/Celery is down
     if not celery_available:
         try:
-            # Call the internal processing function directly (synchronous execution)
+            # Call the internal processing function directly with PDF content (synchronous execution)
             print(f"Processing transcript {transcript.id} synchronously...")
-            result = _process_transcript_internal(str(transcript.id), str(current_user.id))
+            result = _process_transcript_internal(str(transcript.id), str(current_user.id), content)
             print(f"Transcript processed synchronously: {result.get('status', 'unknown')}")
             # Refresh transcript to get updated status from the processing function
             db.refresh(transcript)
@@ -292,50 +264,22 @@ async def get_transcript_status(
     return await get_transcript(transcript_id, current_user, db)
 
 
-@router.post("/{transcript_id}/process", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/{transcript_id}/process", status_code=status.HTTP_400_BAD_REQUEST)
 async def process_transcript_manual(
     transcript_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Manually trigger transcript processing (useful if Celery is not running)"""
-    transcript = db.query(Transcript).filter(
-        Transcript.id == transcript_id,
-        Transcript.user_id == current_user.id
-    ).first()
+    """Manually trigger transcript processing - NO LONGER SUPPORTED
     
-    if not transcript:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Transcript not found"
-        )
-    
-    # Try Celery first
-    try:
-        process_transcript_task.delay(str(transcript.id), str(current_user.id))
-        return {"message": "Processing queued successfully", "transcript_id": str(transcript_id)}
-    except Exception as celery_error:
-        # If Celery fails, process synchronously (call the internal function directly)
-        print(f"Warning: Could not queue Celery task: {celery_error}")
-        print("Falling back to synchronous processing...")
-        try:
-            result = _process_transcript_internal(str(transcript.id), str(current_user.id))
-            # Refresh transcript to get updated status
-            db.refresh(transcript)
-            return result
-        except Exception as sync_error:
-            import traceback
-            error_trace = traceback.format_exc()
-            print(f"Error: Synchronous processing failed: {sync_error}")
-            print(f"Traceback: {error_trace}")
-            # Update transcript status to failed
-            transcript.processing_status = "failed"
-            transcript.error_message = f"Synchronous processing failed: {str(sync_error)}\n{error_trace}"
-            db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to process transcript: {str(sync_error)}"
-            )
+    Since transcripts are now parsed immediately on upload and not stored,
+    this endpoint is no longer needed. Transcripts are processed synchronously
+    or via Celery during upload.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Manual processing is no longer supported. Transcripts are processed immediately on upload."
+    )
 
 
 @router.delete("/{transcript_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -356,10 +300,8 @@ async def delete_transcript(
             detail="Transcript not found"
         )
     
-    # Delete from storage
-    storage_service.delete_file(transcript.file_path)
-    
     # Delete from database (cascade will delete courses)
+    # No need to delete from storage since files are no longer stored
     db.delete(transcript)
     db.commit()
     
