@@ -77,6 +77,7 @@ def get_cors_origins() -> List[str]:
 
     # Explicitly add production/deployment domains here (edit as deployment URLs change)
     deployment_domains = [
+        "https://nu-peer.vercel.app",  # Main production frontend
         "https://nupeer.vercel.app",
         "https://nupeer.app",
         "https://www.nupeersite.com",
