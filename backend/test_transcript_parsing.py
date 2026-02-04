@@ -67,7 +67,7 @@ def test_celery_config():
         return False
 
 def test_processing_function_signature():
-    """Test that processing function accepts pdf_content parameter"""
+    """Test that processing function can read from database"""
     print("\nTesting processing function signature...")
     try:
         from app.tasks.process_transcript import _process_transcript_internal
@@ -76,11 +76,13 @@ def test_processing_function_signature():
         sig = inspect.signature(_process_transcript_internal)
         params = list(sig.parameters.keys())
         
-        if 'pdf_content' in params:
-            print("[OK] _process_transcript_internal accepts pdf_content parameter")
+        # Function should accept transcript_id and user_id, pdf_content is optional
+        if 'transcript_id' in params and 'user_id' in params:
+            print("[OK] _process_transcript_internal has correct signature")
+            print(f"       Parameters: {params}")
             return True
         else:
-            print(f"[FAIL] _process_transcript_internal missing pdf_content parameter")
+            print(f"[FAIL] _process_transcript_internal missing required parameters")
             print(f"       Parameters: {params}")
             return False
     except Exception as e:

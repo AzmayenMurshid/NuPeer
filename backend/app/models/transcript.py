@@ -2,7 +2,7 @@
 Transcript Model
 """
 from sqlalchemy import Column, String, BigInteger, DateTime, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, BYTEA
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
@@ -17,6 +17,7 @@ class Transcript(Base):
     file_path = Column(String(500), nullable=True)  # Path in object storage (optional, no longer used)
     file_name = Column(String(255), nullable=False)
     file_size = Column(BigInteger)
+    pdf_content = Column(BYTEA, nullable=True)  # Store PDF file content in PostgreSQL
     upload_date = Column(DateTime(timezone=True), server_default=func.now())
     processing_status = Column(String(50), default="pending")  # pending, processing, completed, failed
     processed_at = Column(DateTime(timezone=True))

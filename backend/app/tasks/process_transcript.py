@@ -35,7 +35,7 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
     Args:
         transcript_id: UUID of the transcript record
         user_id: UUID of the user
-        pdf_content: PDF file content as bytes (required, no longer downloaded from storage)
+        pdf_content: PDF file content as bytes (optional, will be read from database if not provided)
     """
     db = SessionLocal()
     try:
@@ -44,12 +44,21 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
         if not transcript:
             return {"status": "error", "message": "Transcript not found"}
         
-        # Validate PDF content is provided
-        if not pdf_content:
+        # Get PDF content from database if not provided
+        if pdf_content is None:
+            if transcript.pdf_content is None:
+                transcript.processing_status = "failed"
+                transcript.error_message = "PDF content not found in database"
+                db.commit()
+                return {"status": "error", "message": "PDF content not found in database"}
+            pdf_content = bytes(transcript.pdf_content)  # Convert BYTEA to bytes
+        
+        # Validate PDF content
+        if not pdf_content or len(pdf_content) == 0:
             transcript.processing_status = "failed"
-            transcript.error_message = "PDF content is required for processing"
+            transcript.error_message = "PDF content is empty"
             db.commit()
-            return {"status": "error", "message": "PDF content is required"}
+            return {"status": "error", "message": "PDF content is empty"}
         
         # Check if transcript has been pending for too long
         if transcript.processing_status == "pending":
@@ -282,14 +291,14 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
 
 
 @celery_app.task(name="process_transcript")
-def process_transcript_task(transcript_id: str, user_id: str, pdf_content: bytes):
+def process_transcript_task(transcript_id: str, user_id: str):
     """
     Celery task wrapper for processing transcript PDF
+    PDF content is read from the database
     
     Args:
         transcript_id: UUID of the transcript record
         user_id: UUID of the user
-        pdf_content: PDF file content as bytes
     """
-    return _process_transcript_internal(transcript_id, user_id, pdf_content)
+    return _process_transcript_internal(transcript_id, user_id)
 

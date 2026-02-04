@@ -98,12 +98,13 @@ async def upload_transcript(
         db.commit()
         print("Previous transcripts deleted successfully")
     
-    # Create transcript record (no file_path needed, we parse directly)
+    # Create transcript record with PDF content stored in PostgreSQL
     transcript = Transcript(
         user_id=current_user.id,
         file_path=None,  # No longer storing files in MINIO
         file_name=file.filename,
         file_size=file_size,
+        pdf_content=content,  # Store PDF content in PostgreSQL
         processing_status="pending"
     )
     
@@ -113,9 +114,10 @@ async def upload_transcript(
     
     # Process transcript immediately and synchronously to ensure parsing happens right away
     # This ensures courses are saved to PostgreSQL immediately and available for analytics
+    # PDF content is now read from the database instead of memory
     try:
         print(f"Processing transcript {transcript.id} synchronously...")
-        result = _process_transcript_internal(str(transcript.id), str(current_user.id), content)
+        result = _process_transcript_internal(str(transcript.id), str(current_user.id))
         print(f"Transcript processed: {result.get('status', 'unknown')}")
         if result.get('status') == 'success':
             print(f"Successfully saved {result.get('courses_saved', 0)} courses to database")
