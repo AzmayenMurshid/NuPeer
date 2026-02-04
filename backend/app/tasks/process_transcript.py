@@ -189,6 +189,13 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         else:
                             course_name = truncated + '...'
                     
+                    # Ensure grade_score is calculated (needed for analytics)
+                    grade_score = course_data.get('grade_score')
+                    if grade_score is None and grade:
+                        # Fallback: calculate from grade using PDF processor's grade mapping
+                        from app.services.pdf_processor import pdf_processor
+                        grade_score = pdf_processor._grade_to_score(grade)
+                    
                     # Create Course object with all extracted data
                     course = Course(
                         user_id=uuid.UUID(user_id),
@@ -196,8 +203,8 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         course_code=course_code,
                         course_name=course_name,
                         grade=grade,
-                        grade_score=course_data.get('grade_score'),
-                        credit_hours=course_data.get('credit_hours'),
+                        grade_score=grade_score,  # Always set (calculated if missing)
+                        credit_hours=earned_credits,  # Use earned_credits as credit_hours
                         points=points,  # Store points from transcript
                         semester=course_data.get('semester'),
                         year=course_data.get('year')
@@ -233,13 +240,18 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                 transcript.error_message = f"Some courses had errors: {'; '.join(errors)}"
             db.commit()
             
-            # Log summary
+            # Log summary with detailed information
             print(f"\n=== Transcript Processing Summary ===")
-            print(f"Total courses found: {len(courses_data)}")
+            print(f"Transcript ID: {transcript_id}")
+            print(f"User ID: {user_id}")
+            print(f"Total courses found in PDF: {len(courses_data)}")
             print(f"Courses saved to database: {courses_saved}")
             print(f"Courses skipped (duplicates): {courses_skipped}")
+            if courses_saved > 0:
+                print(f"✅ Successfully parsed and saved {courses_saved} courses to PostgreSQL")
+                print(f"   Courses are now available for analytics")
             if errors:
-                print(f"Errors encountered: {len(errors)}")
+                print(f"⚠️  Errors encountered: {len(errors)}")
                 for error in errors[:5]:  # Show first 5 errors
                     print(f"  - {error}")
                 if len(errors) > 5:

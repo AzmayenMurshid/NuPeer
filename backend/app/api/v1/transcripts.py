@@ -111,65 +111,30 @@ async def upload_transcript(
     db.commit()
     db.refresh(transcript)
     
-    # Process transcript immediately with PDF content (try Celery first, fallback to synchronous)
-    # Check if Redis is available before trying Celery
-    celery_available = False
+    # Process transcript immediately and synchronously to ensure parsing happens right away
+    # This ensures courses are saved to PostgreSQL immediately and available for analytics
     try:
-        # Quick check if Redis is available
-        import redis as redis_client
-        redis_url = settings.REDIS_URL
-        # Parse Redis URL (format: redis://localhost:6379/0)
-        if redis_url.startswith('redis://'):
-            redis_url = redis_url.replace('redis://', '')
-        host_port = redis_url.split('/')[0]
-        if ':' in host_port:
-            host, port = host_port.split(':')
-            port = int(port)
-        else:
-            host = host_port
-            port = 6379
-        
-        # Try to connect to Redis
-        r = redis_client.Redis(host=host, port=port, socket_connect_timeout=1)
-        r.ping()
-        r.close()
-        
-        # Redis is available, try Celery
-        try:
-            # Pass PDF content directly to Celery task
-            process_transcript_task.delay(str(transcript.id), str(current_user.id), content)
-            celery_available = True
-            print(f"Transcript processing queued successfully (Celery)")
-        except Exception as celery_error:
-            print(f"Warning: Could not queue Celery task: {celery_error}")
-            celery_available = False
-    except Exception as redis_error:
-        # Redis is not available, skip Celery
-        print(f"Redis not available ({redis_error}), processing synchronously...")
-        celery_available = False
-    
-    # Always process synchronously if Celery is not available
-    # This ensures transcripts are processed even when Redis/Celery is down
-    if not celery_available:
-        try:
-            # Call the internal processing function directly with PDF content (synchronous execution)
-            print(f"Processing transcript {transcript.id} synchronously...")
-            result = _process_transcript_internal(str(transcript.id), str(current_user.id), content)
-            print(f"Transcript processed synchronously: {result.get('status', 'unknown')}")
-            # Refresh transcript to get updated status from the processing function
-            db.refresh(transcript)
-        except Exception as sync_error:
-            # If synchronous processing also fails, log but don't fail the upload
-            import traceback
-            error_trace = traceback.format_exc()
-            print(f"Error: Synchronous processing also failed: {sync_error}")
-            print(f"Traceback: {error_trace}")
-            # Update transcript status to failed
-            transcript.processing_status = "failed"
-            transcript.error_message = f"Synchronous processing failed: {str(sync_error)}"
-            db.commit()
-            db.refresh(transcript)
-            print("Transcript uploaded but processing failed. Use manual processing endpoint to retry.")
+        print(f"Processing transcript {transcript.id} synchronously...")
+        result = _process_transcript_internal(str(transcript.id), str(current_user.id), content)
+        print(f"Transcript processed: {result.get('status', 'unknown')}")
+        if result.get('status') == 'success':
+            print(f"Successfully saved {result.get('courses_saved', 0)} courses to database")
+        elif result.get('status') == 'error':
+            print(f"Processing error: {result.get('message', 'Unknown error')}")
+        # Refresh transcript to get updated status from the processing function
+        db.refresh(transcript)
+    except Exception as sync_error:
+        # If processing fails, log the error but don't fail the upload
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error: Transcript processing failed: {sync_error}")
+        print(f"Traceback: {error_trace}")
+        # Update transcript status to failed
+        transcript.processing_status = "failed"
+        transcript.error_message = f"Processing failed: {str(sync_error)}"
+        db.commit()
+        db.refresh(transcript)
+        print("Transcript uploaded but processing failed. Check error_message for details.")
     
     return transcript
 

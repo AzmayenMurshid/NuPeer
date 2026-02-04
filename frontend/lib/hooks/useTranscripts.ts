@@ -98,7 +98,13 @@ export const useUploadTranscript = () => {
         return
       }
 
+      // Invalidate transcripts to refresh the list
       queryClient.invalidateQueries({ queryKey: ['transcripts'] })
+      
+      // Invalidate courses and analytics to refresh data after parsing
+      // This ensures analytics show the newly parsed courses
+      queryClient.invalidateQueries({ queryKey: ['courses'] })
+      queryClient.invalidateQueries({ queryKey: ['academic-analytics'] })
     },
   })
 }
