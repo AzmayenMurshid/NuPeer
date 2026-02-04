@@ -202,7 +202,7 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                     grade_score = course_data.get('grade_score')
                     if grade_score is None and grade:
                         # Fallback: calculate from grade using PDF processor's grade mapping
-                        from app.services.pdf_processor import pdf_processor
+                        # pdf_processor is already imported at the top of the file
                         grade_score = pdf_processor._grade_to_score(grade)
                     
                     # Create Course object with all extracted data
