@@ -11,9 +11,6 @@ import { useRouter } from 'next/navigation'
 import { Edit, Trash2, Mail, Phone, X, User, Calendar } from 'lucide-react'
 import { StudyTechniques } from '@/components/help/StudyTechniques'
 
-// Demo data commented out - replaced with empty array
-// No demo data available. Users must upload a transcript and create help requests to see previous tutors.
-const demoPreviousTutors: PreviousTutor[] = []
 
 function HelpPageContent() {
   const { user } = useAuth()
@@ -76,7 +73,7 @@ function HelpPageContent() {
     return courses?.filter(course => course.transcript_id) || []
   }, [courses])
   
-  // Only show real data - no demo data
+  // Use real data only
   const displayPreviousTutors = useMemo(() => {
     return previousTutors || []
   }, [previousTutors])

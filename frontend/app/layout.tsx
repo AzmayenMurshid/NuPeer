@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import { BottomNav } from '@/components/BottomNav'
 import { Footer } from '@/components/Footer'
-import { DemoDataToggle } from '@/components/DemoDataToggle'
 import { Analytics } from '@vercel/analytics/react'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -40,7 +39,6 @@ export default function RootLayout({
             <Footer />
           </div>
           <BottomNav />
-          <DemoDataToggle />
         </Providers>
         {/* Only load Analytics in production/Vercel to avoid 404 errors */}
         {(isProduction || isVercel) && <Analytics />}
