@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
-import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export type EventType = 'tutoring' | 'group_study'
 
@@ -75,38 +74,14 @@ export const useCalendarEvents = (params?: {
   return useQuery<CalendarEvent[]>({
     queryKey: ['calendar-events', params],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        let events = getDemoData().calendarEvents
-        // Filter by event_type if provided
-        if (params?.event_type) {
-          events = events.filter(e => e.event_type === params.event_type)
-        }
-        // Filter by course_code if provided
-        if (params?.course_code) {
-          events = events.filter(e => e.course_code === params.course_code)
-        }
-        return getDemoDataAsync(events)
-      }
-      try {
-        const queryParams = new URLSearchParams()
-        if (params?.start_date) queryParams.append('start_date', params.start_date)
-        if (params?.end_date) queryParams.append('end_date', params.end_date)
-        if (params?.event_type) queryParams.append('event_type', params.event_type)
-        if (params?.course_code) queryParams.append('course_code', params.course_code)
-        
-        const response = await api.get(`/calendar?${queryParams.toString()}`)
-        return response.data
-      } catch (error) {
-        console.warn('API failed, using demo data:', error)
-        let events = getDemoData().calendarEvents
-        if (params?.event_type) {
-          events = events.filter(e => e.event_type === params.event_type)
-        }
-        if (params?.course_code) {
-          events = events.filter(e => e.course_code === params.course_code)
-        }
-        return getDemoDataAsync(events)
-      }
+      const queryParams = new URLSearchParams()
+      if (params?.start_date) queryParams.append('start_date', params.start_date)
+      if (params?.end_date) queryParams.append('end_date', params.end_date)
+      if (params?.event_type) queryParams.append('event_type', params.event_type)
+      if (params?.course_code) queryParams.append('course_code', params.course_code)
+      
+      const response = await api.get(`/calendar?${queryParams.toString()}`)
+      return response.data
     },
   })
 }

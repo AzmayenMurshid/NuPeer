@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
-import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface GPATrendPoint {
   period: string
@@ -44,17 +43,8 @@ export const useAcademicAnalytics = () => {
   return useQuery<AcademicAnalytics>({
     queryKey: ['academic-analytics'],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        return getDemoDataAsync(getDemoData().academicAnalytics)
-      }
-      try {
-        const response = await api.get('/analytics/academic-trends')
-        return response.data
-      } catch (error) {
-        // Fallback to demo data on error
-        console.warn('API failed, using demo data:', error)
-        return getDemoDataAsync(getDemoData().academicAnalytics)
-      }
+      const response = await api.get('/analytics/academic-trends')
+      return response.data
     },
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes

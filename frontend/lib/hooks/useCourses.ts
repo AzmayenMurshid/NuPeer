@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
-import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface Course {
   id: string
@@ -27,16 +26,8 @@ export const useCourses = () => {
   return useQuery<Course[]>({
     queryKey: ['courses'],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        return getDemoDataAsync(getDemoData().courses)
-      }
-      try {
-        const response = await api.get('/courses')
-        return response.data
-      } catch (error) {
-        console.warn('API failed, using demo data:', error)
-        return getDemoDataAsync(getDemoData().courses)
-      }
+      const response = await api.get('/courses')
+      return response.data
     },
   })
 }

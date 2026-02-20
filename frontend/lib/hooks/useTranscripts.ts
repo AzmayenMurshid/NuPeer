@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
-import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface Transcript {
   id: string
@@ -36,68 +35,28 @@ export const useTranscripts = () => {
   return useQuery<Transcript[]>({
     queryKey: ['transcripts'],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        return getDemoDataAsync(getDemoData().transcripts.map(toTranscript))
-      }
-      try {
-        const response = await api.get('/transcripts')
-        return response.data
-      } catch (error) {
-        console.warn('API failed, using demo data:', error)
-        return getDemoDataAsync(getDemoData().transcripts.map(toTranscript))
-      }
+      const response = await api.get('/transcripts')
+      return response.data
     },
   })
 }
 
 export const useUploadTranscript = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async (file: File) => {
-      // In demo mode, don't hit the backend (avoids S3/MinIO dependency)
-      if (shouldUseDemoData()) {
-        const now = new Date()
-        const demoTranscript: Transcript = {
-          id: `demo-upload-${now.getTime()}`,
-          file_name: file.name || 'demo_transcript.pdf',
-          file_size: typeof file.size === 'number' ? file.size : null,
-          upload_date: now.toISOString(),
-          processing_status: 'completed',
-          processed_at: now.toISOString(),
-          error_message: null,
-        }
-        return getDemoDataAsync(demoTranscript, 500)
-      }
-
       const formData = new FormData()
       formData.append('file', file)
       
-      try {
-        const response = await api.post('/transcripts/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        })
-        return response.data
-      } catch (error: any) {
-        // Extract error message from response
-        const errorMessage = error?.response?.data?.detail || error?.message || 'Upload failed'
-        throw new Error(errorMessage)
-      }
+      const response = await api.post('/transcripts/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return response.data
     },
-    onSuccess: (created: Transcript) => {
-      if (shouldUseDemoData()) {
-        // Update cache immediately so UI reflects the "uploaded" transcript
-        queryClient.setQueryData<Transcript[]>(['transcripts'], (prev) => {
-          const existing = prev ?? getDemoData().transcripts.map(toTranscript)
-          // Avoid accidental duplicates if user retries quickly
-          if (existing.some((t) => t.id === created.id)) return existing
-          return [created, ...existing]
-        })
-        return
-      }
-
+    onSuccess: () => {
       // Invalidate transcripts to refresh the list
       queryClient.invalidateQueries({ queryKey: ['transcripts'] })
       

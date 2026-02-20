@@ -30,18 +30,6 @@ const ChartLoader = () => (
   </div>
 )
 
-// Demo data commented out - replaced with empty data structure
-// No demo data available. Users must upload a transcript to see their academic analytics.
-const demoAnalytics = {
-  overall_gpa: 0,
-  total_credits: 0,
-  total_courses: 0,
-  gpa_trend: [],
-  grade_distribution: [],
-  credits_by_semester: [],
-  course_distribution_by_department: [],
-  points_trend: [],
-}
 
 function AnalyticsContent() {
   const { user } = useAuth()
@@ -70,9 +58,18 @@ function AnalyticsContent() {
     }
   }, [])
   
-  // Only show real data - no demo data
+  // Use real data only
   const displayAnalytics = useMemo(() => {
-    return analytics || demoAnalytics
+    return analytics || {
+      overall_gpa: 0,
+      total_credits: 0,
+      total_courses: 0,
+      gpa_trend: [],
+      grade_distribution: [],
+      credits_by_semester: [],
+      course_distribution_by_department: [],
+      points_trend: [],
+    }
   }, [analytics])
   
   
@@ -253,7 +250,7 @@ function AnalyticsContent() {
     })
   }, [displayAnalytics.points_trend, timeFilter, filterByTime, showProjection])
   
-  // Only show real courses - no demo courses, with search filtering (using debounced query)
+  // Filter courses with search query (using debounced query)
   const displayCourses = useMemo(() => {
     const allCourses = courses || []
     if (!debouncedSearchQuery.trim()) {

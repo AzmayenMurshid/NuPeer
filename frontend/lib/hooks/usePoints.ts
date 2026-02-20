@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
-import { shouldUseDemoData, getDemoDataAsync, getDemoData } from '../demoData'
 
 export interface PointsHistory {
   id: string
@@ -35,16 +34,8 @@ export const usePoints = () => {
   return useQuery<PointsSummary>({
     queryKey: ['points'],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        return getDemoDataAsync(getDemoData().points)
-      }
-      try {
-        const response = await api.get<PointsSummary>('/points')
-        return response.data
-      } catch (error) {
-        console.warn('API failed, using demo data:', error)
-        return getDemoDataAsync(getDemoData().points)
-      }
+      const response = await api.get<PointsSummary>('/points')
+      return response.data
     },
   })
 }
@@ -65,20 +56,10 @@ export const useLeaderboard = (limit = 100) => {
   return useQuery<LeaderboardEntry[]>({
     queryKey: ['points', 'leaderboard', limit],
     queryFn: async () => {
-      if (shouldUseDemoData()) {
-        const data = getDemoData().leaderboard.slice(0, limit)
-        return getDemoDataAsync(data)
-      }
-      try {
-        const response = await api.get<LeaderboardEntry[]>('/points/leaderboard', {
-          params: { limit },
-        })
-        return response.data
-      } catch (error) {
-        console.warn('API failed, using demo data:', error)
-        const data = getDemoData().leaderboard.slice(0, limit)
-        return getDemoDataAsync(data)
-      }
+      const response = await api.get<LeaderboardEntry[]>('/points/leaderboard', {
+        params: { limit },
+      })
+      return response.data
     },
   })
 }

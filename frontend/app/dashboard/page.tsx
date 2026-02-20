@@ -22,58 +22,6 @@ import { PointsTrendChart } from '@/components/dashboard/PointsTrendChart'
 // Force dynamic rendering to avoid SSR issues with theme
 export const dynamic = 'force-dynamic'
 
-// Demo data commented out - replaced with empty data structure
-// No demo data available. Users must upload a transcript to see their academic analytics.
-const demoAnalytics = {
-  overall_gpa: 0,
-  total_credits: 0,
-  total_courses: 0,
-  gpa_trend: [],
-  grade_distribution: [],
-  credits_by_semester: [],
-  course_distribution_by_department: [],
-  points_trend: [],
-}
-
-// Demo data for group study recommendations (for testing)
-const demoGroupStudyBrothers = [
-  {
-    helper_id: 'demo-1',
-    helper_name: 'John Smith',
-    helper_email: 'john.smith@example.com',
-    helper_phone_number: '(555) 123-4567',
-    shared_courses: ['CS 101', 'MATH 201', 'PHYS 150'],
-    total_shared_courses: 3,
-    major: 'Computer Science',
-    graduation_year: 2025,
-    pledge_class: 'Alpha',
-    year_in_college: 'Junior',
-  },
-  {
-    helper_id: 'demo-2',
-    helper_name: 'Michael Johnson',
-    helper_email: 'michael.j@example.com',
-    helper_phone_number: '(555) 234-5678',
-    shared_courses: ['CS 101', 'MATH 201'],
-    total_shared_courses: 2,
-    major: 'Computer Science',
-    graduation_year: 2026,
-    pledge_class: 'Beta',
-    year_in_college: 'Sophomore',
-  },
-  {
-    helper_id: 'demo-3',
-    helper_name: 'David Williams',
-    helper_email: 'david.w@example.com',
-    helper_phone_number: null,
-    shared_courses: ['PHYS 150', 'CHEM 101'],
-    total_shared_courses: 2,
-    major: 'Physics',
-    graduation_year: 2025,
-    pledge_class: 'Alpha',
-    year_in_college: 'Junior',
-  },
-]
 
 function DashboardContent() {
   const { user } = useAuth()
@@ -87,18 +35,18 @@ function DashboardContent() {
     return courses?.filter(course => !course.transcript_id) || []
   }, [courses])
   
-  // Use demo data for testing if no real data is available
-  const displayGroupStudyBrothers = useMemo(() => {
-    // For testing: use demo data if no real data (always show for testing)
-    if (!groupStudyBrothers || groupStudyBrothers.length === 0) {
-      return demoGroupStudyBrothers
-    }
-    return groupStudyBrothers
-  }, [groupStudyBrothers])
-  
-  // Only show real data - no demo data
+  // Use real data only
   const displayAnalytics = useMemo(() => {
-    return analytics || demoAnalytics
+    return analytics || {
+      overall_gpa: 0,
+      total_credits: 0,
+      total_courses: 0,
+      gpa_trend: [],
+      grade_distribution: [],
+      credits_by_semester: [],
+      course_distribution_by_department: [],
+      points_trend: [],
+    }
   }, [analytics])
   
   const hasNoData = !analytics || (analytics?.total_courses ?? 0) === 0
@@ -128,7 +76,7 @@ function DashboardContent() {
             error={majorMatchError}
           />
           <GroupStudyRecommendations
-            brothers={displayGroupStudyBrothers}
+            brothers={groupStudyBrothers || []}
             isLoading={isLoadingGroupStudy}
             error={groupStudyError}
             userMajor={user?.major}
