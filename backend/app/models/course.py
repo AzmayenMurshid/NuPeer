@@ -17,7 +17,7 @@ class Course(Base):
     transcript_id = Column(UUID(as_uuid=True), ForeignKey("transcripts.id", ondelete="CASCADE"), nullable=True)  # Nullable for manually added courses
     course_code = Column(String(20), nullable=False, index=True)  # e.g., "CS 101"
     course_name = Column(Text)  # Changed from String(255) to Text to handle variable-length course names
-    grade = Column(String(10))  # e.g., "A", "B+", "3.5"
+    grade = Column(String(20))  # e.g., "A", "B+", "3.5", "IN PROGRESS"
     grade_score = Column(Numeric(3, 2))  # Normalized 0.0-4.0
     credit_hours = Column(Numeric(3, 1))
     points = Column(Numeric(5, 2))  # GPA points (grade_score * credit_hours) from transcript
