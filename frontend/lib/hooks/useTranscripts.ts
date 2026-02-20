@@ -43,7 +43,7 @@ export const useTranscripts = () => {
 
 export const useUploadTranscript = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData()
