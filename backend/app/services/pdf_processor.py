@@ -22,6 +22,21 @@ class PDFProcessor:
         'W': None,  # Withdrawn - no GPA impact
     }
     
+    # Compiled regex patterns (compiled once at class level for performance)
+    _SEMESTER_HEADER_PATTERN = re.compile(r'^\s*([A-Za-z]{2,10})\s*(\d{4})\s*$', re.IGNORECASE)
+    _TRANSFER_SECTION_PATTERN = re.compile(r'Test\s+Credits|Transfer\s+Credits', re.IGNORECASE)
+    _TRANSFER_TERM_PATTERN = re.compile(r'Transferred\s+to\s+Term\s+([A-Z]{2,4})\s+(\d{4})', re.IGNORECASE)
+    _UNDERGRAD_START_PATTERN = re.compile(r'Beginning\s+of\s+Undergraduate', re.IGNORECASE)
+    _HEADER_LABELS_PATTERN = re.compile(r'Course\s+Description|Attempted\s+Earned', re.IGNORECASE)
+    _TERM_SUMMARY_PATTERN = re.compile(r'Term\s+GPA|Term\s+Totals', re.IGNORECASE)
+    _TRAILING_NUMERIC_PATTERN = re.compile(r'\s+\d+\.\d+\s*$')
+    
+    # Course patterns (compiled once for performance)
+    _COURSE_PATTERN1 = re.compile(r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d{3})\s+(\d+\.\d{3})\s+([A-F][+-]?|S|W|In\s+Progress)\s+(\d+\.\d{3})$', re.IGNORECASE)
+    _COURSE_PATTERN2 = re.compile(r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+([A-F][+-]?|S|W|In\s+Progress)\s+(\d+\.\d+)$', re.IGNORECASE)
+    _COURSE_PATTERN3 = re.compile(r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+([A-F][+-]?|S|W)$', re.IGNORECASE)
+    _TRANSFER_COURSE_PATTERN = re.compile(r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(S|W)$', re.IGNORECASE)
+    
     def extract_text(self, pdf_content: bytes) -> str:
         """Extract text from PDF"""
         # pdfplumber.open() requires a file-like object, not raw bytes
@@ -115,6 +130,7 @@ class PDFProcessor:
         ...
         """
         courses = []
+        courses_parsed_count = 0  # Counter for courses successfully parsed
         
         # Split text into lines to process sequentially
         lines = text.split('\n')
@@ -123,29 +139,7 @@ class PDFProcessor:
         current_semester = None
         current_year = None
         
-        # Pattern for semester headers: Flexible pattern to match any semester format
-        # Matches: "FA 2024", "SP 2025", "SU 2025", "Fall 2024", "Spring 2025", "Winter 2023", etc.
-        # Also handles variations like "FA2024", "Fall2024", "SP 2025", etc.
-        # The pattern captures: (semester code/name) followed by (4-digit year)
-        # Semester can be 2-10 characters (covers FA, SP, SU, Fall, Spring, Summer, Winter, and variations)
-        # We look for lines that are primarily just the semester header (not mixed with other text)
-        semester_header_pattern = r'^\s*([A-Za-z]{2,10})\s*(\d{4})\s*$'
-        
-        # Course patterns (semester NOT included in course line - it comes from header)
-        # Based on actual transcript structure: SUBJECT CATALOG_NUM Title Attempted Earned Grade Points
-        # Example: "COSC 1336 Computer Science & Program 3.000 3.000 A- 11.010"
-        
-        # Pattern 1: Standard course format with proper spacing
-        # Matches: Subject (2-4 letters), Catalog (3-4 digits), Title (variable), Attempted, Earned, Grade, Points
-        # Grade can be: Letter grade (A-F with +/-), "S" (Satisfactory), "W" (Withdrawn), or "In Progress"
-        # The title is matched greedily until we see the credit pattern (d+.d{3})
-        pattern1 = r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d{3})\s+(\d+\.\d{3})\s+([A-F][+-]?|S|W|In\s+Progress)\s+(\d+\.\d{3})$'
-        
-        # Pattern 2: Same as pattern1 but more flexible with decimal places
-        pattern2 = r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+([A-F][+-]?|S|W|In\s+Progress)\s+(\d+\.\d+)$'
-        
-        # Pattern 3: Handle courses without points (for transfer credits that might not have points)
-        pattern3 = r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+([A-F][+-]?|S|W)$'
+        # Use pre-compiled regex patterns (defined at class level for performance)
         
         # Process lines sequentially to track semester headers
         seen_courses = set()
@@ -164,15 +158,15 @@ class PDFProcessor:
             if not line_stripped:
                 continue
             
-            # Detect transfer/test credits section
-            if re.search(r'Test\s+Credits|Transfer\s+Credits', line_stripped, re.IGNORECASE):
+            # Detect transfer/test credits section (using pre-compiled pattern)
+            if self._TRANSFER_SECTION_PATTERN.search(line_stripped):
                 in_transfer_section = True
                 # Transfer credits are typically assigned to the first term
                 # We'll use the first semester we encounter
                 continue
             
-            # Detect "Transferred to Term" lines to get the term for transfer credits
-            transfer_match = re.search(r'Transferred\s+to\s+Term\s+([A-Z]{2,4})\s+(\d{4})', line_stripped, re.IGNORECASE)
+            # Detect "Transferred to Term" lines to get the term for transfer credits (using pre-compiled pattern)
+            transfer_match = self._TRANSFER_TERM_PATTERN.search(line_stripped)
             if transfer_match:
                 transfer_semester_code = transfer_match.group(1).strip()
                 transfer_year_str = transfer_match.group(2).strip()
@@ -186,15 +180,15 @@ class PDFProcessor:
                 continue
             
             # Detect end of transfer section (when we hit "Beginning of Undergraduate Record" or a semester header)
-            if in_transfer_section and (re.search(r'Beginning\s+of\s+Undergraduate', line_stripped, re.IGNORECASE) or 
-                                       re.match(semester_header_pattern, line_stripped, re.IGNORECASE)):
+            if in_transfer_section and (self._UNDERGRAD_START_PATTERN.search(line_stripped) or 
+                                       self._SEMESTER_HEADER_PATTERN.match(line_stripped)):
                 in_transfer_section = False
             
             # Handle transfer credit course lines (format: "COURSE_CODE Course Name Credits Grade")
             # These appear after "Transferred to Term" lines
             # Example: "ENGL 1301 First Year Writing I 3.000 S"
             if in_transfer_section and transfer_term and transfer_year:
-                transfer_course_match = re.match(r'^([A-Z]{2,4})\s+(\d{3,4})\s+(.+?)\s+(\d+\.\d+)\s+(S|W)$', line_stripped, re.IGNORECASE)
+                transfer_course_match = self._TRANSFER_COURSE_PATTERN.match(line_stripped)
                 if transfer_course_match:
                     subject = transfer_course_match.group(1).strip().upper()
                     catalog_num = transfer_course_match.group(2).strip()
@@ -224,11 +218,13 @@ class PDFProcessor:
                         'attempted_credits': credits,
                         'points': 0.0  # Transfer credits don't contribute to GPA points
                     })
+                    courses_parsed_count += 1
+                    print(f"[Parser] Parsed transfer course #{courses_parsed_count}: {course_code} - {course_name} ({semester} {year})")
                     continue
             
             # Check if this line is a semester header (should be primarily just semester + year)
             # Use ^ and $ anchors to ensure the line is primarily just the semester header
-            semester_match = re.match(semester_header_pattern, line_stripped, re.IGNORECASE)
+            semester_match = self._SEMESTER_HEADER_PATTERN.match(line_stripped)
             if semester_match:
                 semester_code = semester_match.group(1).strip()
                 year_str = semester_match.group(2).strip()
@@ -261,17 +257,17 @@ class PDFProcessor:
                 except ValueError:
                     pass  # Not a valid year, continue processing as regular line
             
-            # Skip header lines that contain column labels
-            if re.search(r'Course\s+Description|Attempted\s+Earned', line_stripped, re.IGNORECASE):
+            # Skip header lines that contain column labels (using pre-compiled pattern)
+            if self._HEADER_LABELS_PATTERN.search(line_stripped):
                 continue
             
             # Skip Term GPA/Totals summary lines (we'll extract these separately if needed)
-            if re.search(r'Term\s+GPA|Term\s+Totals', line_stripped, re.IGNORECASE):
+            if self._TERM_SUMMARY_PATTERN.search(line_stripped):
                 continue
             
-            # Try to match course patterns in this line
-            for pattern in [pattern1, pattern2, pattern3]:
-                match = re.match(pattern, line_stripped, re.IGNORECASE)
+            # Try to match course patterns in this line (using pre-compiled patterns)
+            for pattern in [self._COURSE_PATTERN1, self._COURSE_PATTERN2, self._COURSE_PATTERN3]:
+                match = pattern.match(line_stripped)
                 if match:
                     try:
                         # Extract subject and catalog number separately
@@ -290,8 +286,8 @@ class PDFProcessor:
                         
                         # Clean up course name - remove trailing numbers/spaces that might be misparsed
                         if course_name:
-                            # Remove trailing numeric patterns that might be credits
-                            course_name = re.sub(r'\s+\d+\.\d+\s*$', '', course_name).strip()
+                            # Remove trailing numeric patterns that might be credits (using pre-compiled pattern)
+                            course_name = self._TRAILING_NUMERIC_PATTERN.sub('', course_name).strip()
                         
                         # Limit course name to reasonable length
                         if course_name and len(course_name) > 250:
@@ -395,6 +391,9 @@ class PDFProcessor:
                             'points': points if points is not None else 0.0  # Store points separately
                         })
                         
+                        courses_parsed_count += 1
+                        print(f"[Parser] Parsed course #{courses_parsed_count}: {course_code} - {course_name} | Grade: {grade} | {semester} {year}")
+                        
                         # Break after first successful match
                         break
                     except (ValueError, AttributeError, IndexError) as e:
@@ -425,6 +424,13 @@ class PDFProcessor:
             return (-year, semester_priority, course_code)  # Negative year for descending order
         
         sorted_courses = sorted(unique_courses.values(), key=sort_key)
+        
+        # Log parsing summary
+        print(f"\n[Parser] Parsing Summary:")
+        print(f"  Total courses parsed: {courses_parsed_count}")
+        print(f"  Unique courses after deduplication: {len(sorted_courses)}")
+        if courses_parsed_count != len(sorted_courses):
+            print(f"  Duplicates removed: {courses_parsed_count - len(sorted_courses)}")
         
         return sorted_courses
     

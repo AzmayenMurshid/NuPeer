@@ -112,11 +112,41 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
             # Save courses to database
             courses_saved = 0
             courses_skipped = 0
+            courses_processed_count = 0  # Counter for courses processed (attempted to save)
             errors = []
             
-            print(f"Processing {len(courses_data)} courses extracted from transcript...")
+            print(f"\n[Processor] Starting to process {len(courses_data)} courses extracted from transcript...")
+            print(f"[Processor] Course processing will be tracked with increment counters\n")
+            
+            # OPTIMIZATION: Fetch all existing courses for this user in ONE query instead of per-course queries
+            # This reduces database round trips from O(n) to O(1)
+            print(f"[Processor] Fetching existing courses for user {user_id}...")
+            existing_courses_query = db.query(Course).filter(
+                Course.user_id == uuid.UUID(user_id)
+            ).all()
+            
+            # Build in-memory lookup sets for O(1) duplicate checking
+            # Key format: (course_code, semester, year)
+            existing_courses_set = {
+                (course.course_code, course.semester, course.year): course
+                for course in existing_courses_query
+            }
+            
+            # Track courses from the same transcript being processed
+            same_transcript_courses = {
+                (course.course_code, course.semester, course.year)
+                for course in existing_courses_query
+                if course.transcript_id == transcript.id
+            }
+            
+            print(f"[Processor] Found {len(existing_courses_set)} existing courses. Using in-memory lookup for duplicate detection.")
+            
+            # Batch commit configuration
+            BATCH_SIZE = 50  # Commit every 50 courses instead of every course
+            courses_to_insert = []
             
             for course_data in courses_data:
+                courses_processed_count += 1
                 try:
                     # Validate ALL required fields: course_code, course_name, attempted_credits, earned_credits, grade, points
                     course_code = course_data.get('course_code')
@@ -157,39 +187,30 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         courses_skipped += 1
                         continue
                     
-                    # Check if course already exists (handle duplicates)
-                    # First, check for exact match (course_code, semester, year) - this is what the unique constraint enforces
-                    existing_course = db.query(Course).filter(
-                        Course.user_id == uuid.UUID(user_id),
-                        Course.course_code == course_code,
-                        Course.semester == course_data.get('semester'),
-                        Course.year == course_data.get('year')
-                    ).first()
+                    # OPTIMIZATION: Use in-memory set lookup instead of database query (O(1) vs O(n) database queries)
+                    course_key = (course_code, course_data.get('semester'), course_data.get('year'))
+                    
+                    # Check if course already exists using in-memory lookup
+                    existing_course = existing_courses_set.get(course_key)
                     
                     # If exact match exists, skip it (regardless of transcript_id)
                     # The unique constraint prevents duplicates on (user_id, course_code, semester, year)
                     if existing_course:
                         # Check if it's from the same transcript (re-processing the same transcript)
                         if existing_course.transcript_id == transcript.id:
-                            print(f"Skipping duplicate course from same transcript: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                            print(f"[Processor] Course #{courses_processed_count}/{len(courses_data)} SKIPPED (duplicate from same transcript): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
                         elif existing_course.transcript_id is None:
-                            print(f"Skipping duplicate course (matches manually-added course): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                            print(f"[Processor] Course #{courses_processed_count}/{len(courses_data)} SKIPPED (matches manually-added course): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
                         else:
-                            print(f"Skipping duplicate course (from another transcript): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                            print(f"[Processor] Course #{courses_processed_count}/{len(courses_data)} SKIPPED (duplicate from another transcript): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
                         courses_skipped += 1
                         continue
                     
-                    # If no exact match, check for manually-added course (transcript_id is None) with same course_code
-                    # This is for informational purposes only - we won't create a duplicate
-                    existing_current_course = db.query(Course).filter(
-                        Course.user_id == uuid.UUID(user_id),
-                        Course.course_code == course_code,
-                        Course.transcript_id.is_(None)  # Only match "current" courses
-                    ).first()
-                    if existing_current_course:
-                        # Found a manually-added course with the same code but different semester/year
-                        # This is allowed - the unique constraint allows different semester/year combinations
-                        print(f"Note: Manually-added course {course_code} exists with different semester/year, creating transcript entry")
+                    # Also check if this exact course was already added in this batch (same transcript processing)
+                    if course_key in same_transcript_courses:
+                        print(f"[Processor] Course #{courses_processed_count}/{len(courses_data)} SKIPPED (already in same transcript): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                        courses_skipped += 1
+                        continue
                     
                     # Create new course
                     # Truncate course_name if excessively long (though Text column has no hard limit)
@@ -223,35 +244,53 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         semester=course_data.get('semester'),
                         year=course_data.get('year')
                     )
-                    # Add course and commit individually to handle duplicates gracefully
-                    # This way, if one course fails, others can still be saved
-                    try:
-                        db.add(course)
-                        db.commit()  # Commit immediately to catch unique violations per course
-                        courses_saved += 1
-                        # Log successful course addition
-                        print(f"Added course: {course_code} - {course_name or 'No name'} | Grade: {grade} | Credits: {course_data.get('credit_hours')} | Semester: {course_data.get('semester')} | Year: {course_data.get('year')}")
-                    except IntegrityError as integrity_error:
-                        # Rollback this course addition
-                        db.rollback()
-                        error_str = str(integrity_error.orig) if hasattr(integrity_error, 'orig') else str(integrity_error)
-                        
-                        # Check if it's a unique violation
-                        is_unique_violation = (
-                            'unique' in error_str.lower() or 
-                            'duplicate key' in error_str.lower() or
-                            (PSYCOPG2_AVAILABLE and isinstance(integrity_error.orig, UniqueViolation))
-                        )
-                        
-                        if is_unique_violation:
-                            print(f"Skipping duplicate course (unique constraint): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
-                            courses_skipped += 1
-                        else:
-                            # Other integrity errors (foreign key, etc.)
-                            error_msg = f"Integrity error saving course {course_data.get('course_code', 'unknown')}: {error_str}"
+                    
+                    # OPTIMIZATION: Batch courses for bulk insert instead of individual commits
+                    courses_to_insert.append(course)
+                    same_transcript_courses.add(course_key)  # Track in batch to avoid duplicates
+                    
+                    # Log course queued for batch insert
+                    if courses_processed_count % 10 == 0 or courses_processed_count == len(courses_data):
+                        print(f"[Processor] Course #{courses_processed_count}/{len(courses_data)} QUEUED: {course_code} - {course_name or 'No name'} | Grade: {grade} | Credits: {course_data.get('credit_hours')} | Semester: {course_data.get('semester')} | Year: {course_data.get('year')}")
+                    
+                    # Commit in batches for better performance
+                    if len(courses_to_insert) >= BATCH_SIZE:
+                        try:
+                            db.bulk_save_objects(courses_to_insert)
+                            db.commit()
+                            batch_saved = len(courses_to_insert)
+                            courses_saved += batch_saved
+                            print(f"[Processor] Batch commit: {batch_saved} courses saved (total: {courses_saved})")
+                            courses_to_insert = []
+                        except IntegrityError as batch_error:
+                            # If batch fails, fall back to individual inserts for this batch
+                            db.rollback()
+                            print(f"[Processor] Batch commit failed, processing individually...")
+                            for individual_course in courses_to_insert:
+                                try:
+                                    db.add(individual_course)
+                                    db.commit()
+                                    courses_saved += 1
+                                except IntegrityError as individual_error:
+                                    db.rollback()
+                                    error_str = str(individual_error.orig) if hasattr(individual_error, 'orig') else str(individual_error)
+                                    is_unique_violation = (
+                                        'unique' in error_str.lower() or 
+                                        'duplicate key' in error_str.lower() or
+                                        (PSYCOPG2_AVAILABLE and isinstance(individual_error.orig, UniqueViolation))
+                                    )
+                                    if is_unique_violation:
+                                        courses_skipped += 1
+                                    else:
+                                        error_msg = f"Integrity error saving course {individual_course.course_code}: {error_str}"
+                                        errors.append(error_msg)
+                            courses_to_insert = []
+                        except Exception as batch_exception:
+                            db.rollback()
+                            error_msg = f"Error in batch insert: {str(batch_exception)}"
                             errors.append(error_msg)
                             print(f"ERROR: {error_msg}")
-                        continue
+                            courses_to_insert = []
                     
                 except Exception as course_error:
                     # Rollback any pending changes for this course
@@ -263,6 +302,42 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                     errors.append(error_msg)
                     print(f"ERROR: {error_msg}")
                     continue
+            
+            # Commit any remaining courses in the batch
+            if courses_to_insert:
+                try:
+                    db.bulk_save_objects(courses_to_insert)
+                    db.commit()
+                    batch_saved = len(courses_to_insert)
+                    courses_saved += batch_saved
+                    print(f"[Processor] Final batch commit: {batch_saved} courses saved (total: {courses_saved})")
+                except IntegrityError as batch_error:
+                    # If batch fails, fall back to individual inserts
+                    db.rollback()
+                    print(f"[Processor] Final batch commit failed, processing individually...")
+                    for individual_course in courses_to_insert:
+                        try:
+                            db.add(individual_course)
+                            db.commit()
+                            courses_saved += 1
+                        except IntegrityError as individual_error:
+                            db.rollback()
+                            error_str = str(individual_error.orig) if hasattr(individual_error, 'orig') else str(individual_error)
+                            is_unique_violation = (
+                                'unique' in error_str.lower() or 
+                                'duplicate key' in error_str.lower() or
+                                (PSYCOPG2_AVAILABLE and isinstance(individual_error.orig, UniqueViolation))
+                            )
+                            if is_unique_violation:
+                                courses_skipped += 1
+                            else:
+                                error_msg = f"Integrity error saving course {individual_course.course_code}: {error_str}"
+                                errors.append(error_msg)
+                except Exception as batch_exception:
+                    db.rollback()
+                    error_msg = f"Error in final batch insert: {str(batch_exception)}"
+                    errors.append(error_msg)
+                    print(f"ERROR: {error_msg}")
             
             # Update transcript status
             transcript.processing_status = "completed"
@@ -276,8 +351,17 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
             print(f"Transcript ID: {transcript_id}")
             print(f"User ID: {user_id}")
             print(f"Total courses found in PDF: {len(courses_data)}")
+            print(f"Total courses processed: {courses_processed_count}")
             print(f"Courses saved to database: {courses_saved}")
             print(f"Courses skipped (duplicates): {courses_skipped}")
+            
+            # Verify count accuracy
+            if courses_processed_count != len(courses_data):
+                print(f"⚠️  WARNING: Processed count ({courses_processed_count}) doesn't match extracted count ({len(courses_data)})")
+            if courses_saved + courses_skipped != courses_processed_count:
+                print(f"⚠️  WARNING: Saved ({courses_saved}) + Skipped ({courses_skipped}) != Processed ({courses_processed_count})")
+            else:
+                print(f"✅ Count verification: {courses_saved} saved + {courses_skipped} skipped = {courses_processed_count} processed")
             if courses_saved > 0:
                 print(f"✅ Successfully parsed and saved {courses_saved} courses to PostgreSQL")
                 print(f"   Courses are now available for analytics")
