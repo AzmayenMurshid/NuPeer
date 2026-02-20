@@ -3,6 +3,7 @@ Celery task for processing transcripts
 """
 from celery import Celery
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -11,6 +12,14 @@ from app.models.transcript import Transcript
 from app.models.course import Course
 import uuid
 from typing import Optional
+
+# Try to import psycopg2 errors for better error handling
+try:
+    from psycopg2.errors import UniqueViolation
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
+    UniqueViolation = None
 
 celery_app = Celery(
     "nupeer",
@@ -148,8 +157,8 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         courses_skipped += 1
                         continue
                     
-                    # Check if course already exists (handle duplicates and update current courses)
-                    # First, try exact match (course_code, semester, year)
+                    # Check if course already exists (handle duplicates)
+                    # First, check for exact match (course_code, semester, year) - this is what the unique constraint enforces
                     existing_course = db.query(Course).filter(
                         Course.user_id == uuid.UUID(user_id),
                         Course.course_code == course_code,
@@ -157,34 +166,30 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         Course.year == course_data.get('year')
                     ).first()
                     
-                    # If no exact match, try to find a "current" course (transcript_id is None) with matching course_code
-                    # This handles cases where semester/year might not match exactly
-                    # However, we should NOT automatically update manually-added courses to avoid overwriting user data
-                    # Instead, we'll create a new course entry for the transcript version
-                    if not existing_course:
-                        existing_current_course = db.query(Course).filter(
-                            Course.user_id == uuid.UUID(user_id),
-                            Course.course_code == course_code,
-                            Course.transcript_id.is_(None)  # Only match "current" courses
-                        ).first()
-                        if existing_current_course:
-                            # Found a manually-added course with the same code
-                            # Don't overwrite it - create a separate entry for the transcript version
-                            # This preserves the user's manually entered data
-                            print(f"Found manually-added course {course_code}, creating separate transcript entry to preserve user data")
-                            # Continue to create new course below
-                    
+                    # If exact match exists, skip it (regardless of transcript_id)
+                    # The unique constraint prevents duplicates on (user_id, course_code, semester, year)
                     if existing_course:
-                        # If existing course has a transcript_id, it's a duplicate from another transcript - skip it
-                        if existing_course.transcript_id is not None:
-                            print(f"Skipping duplicate course: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
-                            courses_skipped += 1
-                            continue
-                        # If existing course has no transcript_id, it's a manually-added "current" course
-                        # We should NOT overwrite it - instead, create a new entry for the transcript version
-                        # This preserves the user's manually entered semester/year data
-                        print(f"Found manually-added course {course_code}, creating separate transcript entry to preserve user data")
-                        # Continue to create new course below
+                        # Check if it's from the same transcript (re-processing the same transcript)
+                        if existing_course.transcript_id == transcript.id:
+                            print(f"Skipping duplicate course from same transcript: {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                        elif existing_course.transcript_id is None:
+                            print(f"Skipping duplicate course (matches manually-added course): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                        else:
+                            print(f"Skipping duplicate course (from another transcript): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                        courses_skipped += 1
+                        continue
+                    
+                    # If no exact match, check for manually-added course (transcript_id is None) with same course_code
+                    # This is for informational purposes only - we won't create a duplicate
+                    existing_current_course = db.query(Course).filter(
+                        Course.user_id == uuid.UUID(user_id),
+                        Course.course_code == course_code,
+                        Course.transcript_id.is_(None)  # Only match "current" courses
+                    ).first()
+                    if existing_current_course:
+                        # Found a manually-added course with the same code but different semester/year
+                        # This is allowed - the unique constraint allows different semester/year combinations
+                        print(f"Note: Manually-added course {course_code} exists with different semester/year, creating transcript entry")
                     
                     # Create new course
                     # Truncate course_name if excessively long (though Text column has no hard limit)
@@ -218,29 +223,46 @@ def _process_transcript_internal(transcript_id: str, user_id: str, pdf_content: 
                         semester=course_data.get('semester'),
                         year=course_data.get('year')
                     )
-                    db.add(course)
-                    courses_saved += 1
-                    
-                    # Log successful course addition
-                    print(f"Added course: {course_code} - {course_name or 'No name'} | Grade: {grade} | Credits: {course_data.get('credit_hours')} | Semester: {course_data.get('semester')} | Year: {course_data.get('year')}")
+                    # Add course and commit individually to handle duplicates gracefully
+                    # This way, if one course fails, others can still be saved
+                    try:
+                        db.add(course)
+                        db.commit()  # Commit immediately to catch unique violations per course
+                        courses_saved += 1
+                        # Log successful course addition
+                        print(f"Added course: {course_code} - {course_name or 'No name'} | Grade: {grade} | Credits: {course_data.get('credit_hours')} | Semester: {course_data.get('semester')} | Year: {course_data.get('year')}")
+                    except IntegrityError as integrity_error:
+                        # Rollback this course addition
+                        db.rollback()
+                        error_str = str(integrity_error.orig) if hasattr(integrity_error, 'orig') else str(integrity_error)
+                        
+                        # Check if it's a unique violation
+                        is_unique_violation = (
+                            'unique' in error_str.lower() or 
+                            'duplicate key' in error_str.lower() or
+                            (PSYCOPG2_AVAILABLE and isinstance(integrity_error.orig, UniqueViolation))
+                        )
+                        
+                        if is_unique_violation:
+                            print(f"Skipping duplicate course (unique constraint): {course_code} (semester: {course_data.get('semester')}, year: {course_data.get('year')})")
+                            courses_skipped += 1
+                        else:
+                            # Other integrity errors (foreign key, etc.)
+                            error_msg = f"Integrity error saving course {course_data.get('course_code', 'unknown')}: {error_str}"
+                            errors.append(error_msg)
+                            print(f"ERROR: {error_msg}")
+                        continue
                     
                 except Exception as course_error:
+                    # Rollback any pending changes for this course
+                    try:
+                        db.rollback()
+                    except:
+                        pass
                     error_msg = f"Error saving course {course_data.get('course_code', 'unknown')}: {str(course_error)}"
                     errors.append(error_msg)
                     print(f"ERROR: {error_msg}")
                     continue
-            
-            # Commit all courses at once
-            try:
-                db.commit()
-                print(f"Successfully committed {courses_saved} courses to database")
-            except Exception as commit_error:
-                db.rollback()
-                transcript.processing_status = "failed"
-                transcript.error_message = f"Database error: {str(commit_error)}"
-                db.commit()
-                print(f"ERROR: Failed to commit courses to database: {str(commit_error)}")
-                return {"status": "error", "message": f"Failed to save courses: {str(commit_error)}"}
             
             # Update transcript status
             transcript.processing_status = "completed"
