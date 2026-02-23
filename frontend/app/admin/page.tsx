@@ -47,7 +47,7 @@ export default function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [pointsToAdd, setPointsToAdd] = useState('')
   const [description, setDescription] = useState('')
-  const [isAdmin, setIsAdmin] = useState(false)
+  // Removed isAdmin check - password-only protection
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   
@@ -62,7 +62,6 @@ export default function AdminPage() {
     const verified = sessionStorage.getItem('admin_password_verified')
     if (verified === 'true') {
       setIsPasswordVerified(true)
-      checkAdminStatus()
     }
   }, [])
 
@@ -72,7 +71,6 @@ export default function AdminPage() {
     if (adminPassword === currentPassword) {
       setIsPasswordVerified(true)
       sessionStorage.setItem('admin_password_verified', 'true')
-      checkAdminStatus()
       setMessage(null)
     } else {
       setMessage({ type: 'error', text: 'Incorrect password. Access denied.' })
@@ -119,24 +117,7 @@ export default function AdminPage() {
     setShowPasswordChange(false)
   }
 
-  // Check admin status on mount
-  useEffect(() => {
-    if (isPasswordVerified) {
-      checkAdminStatus()
-    }
-  }, [isPasswordVerified])
-
-  const checkAdminStatus = async () => {
-    try {
-      const response = await api.get('/admin/check')
-      setIsAdmin(response.data.is_admin)
-      if (!response.data.is_admin) {
-        setMessage({ type: 'error', text: 'You do not have admin access' })
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to check admin status' })
-    }
-  }
+  // Password-only protection - no backend admin check needed
 
   const searchUsers = async () => {
     if (!searchQuery.trim()) {
@@ -249,23 +230,6 @@ export default function AdminPage() {
     )
   }
 
-  // Backend admin check - must also be an admin user
-  if (!isAdmin) {
-    return (
-      <ProtectedRoute>
-        <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
-          <div className="text-center">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h1>
-            <p className="text-gray-600 dark:text-gray-400">You do not have admin access to this page.</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              Your email must be registered as an admin in the system.
-            </p>
-          </div>
-        </div>
-      </ProtectedRoute>
-    )
-  }
 
   return (
     <ProtectedRoute>
