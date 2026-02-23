@@ -17,7 +17,8 @@ router = APIRouter()
 
 class GPATrendPoint(BaseModel):
     period: str  # e.g., "Fall 2023" or "2023"
-    gpa: float
+    gpa: float  # Term GPA for this period
+    cumulative_gpa: float  # Cumulative GPA up to and including this period
     credits: float
     course_count: int
 
@@ -170,13 +171,26 @@ async def get_academic_trends(
         # Fallback for malformed periods
         return (0, 99)
     
+    # Calculate cumulative GPA progressively from term GPAs
     gpa_trend = []
+    cumulative_total_points = 0.0
+    cumulative_total_credits = 0.0
+    
     for period, data in sorted(semester_data.items(), key=sort_period_key):
-        gpa = round(data["points"] / data["credits"], 2) if data["credits"] > 0 else 0.0
+        term_gpa = round(data["points"] / data["credits"], 2) if data["credits"] > 0 else 0.0
+        term_credits = round(data["credits"], 1)
+        term_points = data["points"]
+        
+        # Calculate cumulative GPA: (previous_cumulative_points + current_term_points) / (previous_cumulative_credits + current_term_credits)
+        cumulative_total_points += term_points
+        cumulative_total_credits += data["credits"]
+        cumulative_gpa = round(cumulative_total_points / cumulative_total_credits, 2) if cumulative_total_credits > 0 else 0.0
+        
         gpa_trend.append(GPATrendPoint(
             period=period,
-            gpa=gpa,
-            credits=round(data["credits"], 1),
+            gpa=term_gpa,
+            cumulative_gpa=cumulative_gpa,
+            credits=term_credits,
             course_count=data["count"]
         ))
     
@@ -224,6 +238,7 @@ async def get_academic_trends(
         GPATrendPoint(
             period=point.period,
             gpa=0.0,  # Not used for credits chart
+            cumulative_gpa=0.0,  # Not used for credits chart
             credits=point.credits,
             course_count=point.course_count
         )
