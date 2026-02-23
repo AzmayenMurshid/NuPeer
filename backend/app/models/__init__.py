@@ -9,11 +9,12 @@ from app.models.experience import Experience
 from app.models.resume import Resume
 from app.models.mentorship_request import MentorshipRequest, RequestStatus
 from app.models.points import PointsHistory, PointType
+from app.models.battle_buddy import BattleBuddyTeam, BattleBuddyMember
 
 __all__ = [
     "User", "Transcript", "Course", "HelpRequest", "Recommendation", 
     "CalendarEvent", "EventParticipant", "EventType",
     "AlumniProfile", "Experience", "Resume", "MentorshipRequest", "RequestStatus",
-    "PointsHistory", "PointType"
+    "PointsHistory", "PointType", "BattleBuddyTeam", "BattleBuddyMember"
 ]
 
