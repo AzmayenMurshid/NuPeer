@@ -180,9 +180,19 @@ export function Footer() {
               </a>
             </div>
             
-            <p className="text-sm text-gray-500 dark:text-gray-500">
-              Built for Sigma Nu Zeta Chi
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-500 dark:text-gray-500">
+                Built for Sigma Nu Zeta Chi
+              </p>
+              <span className="text-gray-400 dark:text-gray-600">•</span>
+              <Link
+                href="/admin"
+                className="text-xs text-gray-400 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-500 transition-colors"
+                title="Admin Panel"
+              >
+                Admin
+              </Link>
+            </div>
           </div>
         </div>
       </div>
