@@ -200,7 +200,7 @@ class PDFProcessor:
                     # Use transfer term/year
                     semester = transfer_term
                     year = transfer_year
-                    
+
                     # Skip if we've already seen this course
                     course_key = (course_code, semester, year, 'transfer')
                     if course_key in seen_courses:

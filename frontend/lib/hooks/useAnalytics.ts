@@ -3,7 +3,8 @@ import { api } from '../api'
 
 export interface GPATrendPoint {
   period: string
-  gpa: number
+  gpa: number  // Term GPA for this period
+  cumulative_gpa: number  // Cumulative GPA up to and including this period
   credits: number
   course_count: number
 }

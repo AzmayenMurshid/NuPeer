@@ -126,7 +126,8 @@ export function GPATrendChart({
               }}
               formatter={(value: any, name?: string, props?: any) => {
                 const displayName = name || ''
-                if (displayName === 'GPA' || displayName === 'GPA (Projected)') {
+                if (displayName === 'Term GPA' || displayName === 'Term GPA (Projected)' || 
+                    displayName === 'Cumulative GPA' || displayName === 'Cumulative GPA (Projected)') {
                   const credits = props?.payload?.credits ? ` | Credits: ${props.payload.credits}` : ''
                   const courses = props?.payload?.course_count ? ` | Courses: ${props.payload.course_count}` : ''
                   return [`${value.toFixed(2)}${credits}${courses}`, displayName]
@@ -152,20 +153,39 @@ export function GPATrendChart({
               baseValue={0}
               legendType="none"
             />
+            {/* Term GPA Line */}
             <Line 
               type="monotone" 
               dataKey="gpa" 
               stroke="#f59e0b" 
-              strokeWidth={5}
-              name="GPA"
+              strokeWidth={3}
+              name="Term GPA"
               dot={(props: any) => {
                 const { payload } = props
                 if (payload?.isProjected) {
                   return <circle cx={props.cx} cy={props.cy} r={4} fill="#f59e0b" opacity={0.6} />
                 }
-                return <circle cx={props.cx} cy={props.cy} r={7} fill="#f59e0b" stroke="#fff" strokeWidth={2.5} />
+                return <circle cx={props.cx} cy={props.cy} r={6} fill="#f59e0b" stroke="#fff" strokeWidth={2} />
               }}
-              activeDot={{ r: 12, stroke: '#f59e0b', strokeWidth: 3, fill: '#fff' }}
+              activeDot={{ r: 10, stroke: '#f59e0b', strokeWidth: 2, fill: '#fff' }}
+              strokeDasharray={undefined}
+              animationDuration={800}
+            />
+            {/* Cumulative GPA Line */}
+            <Line 
+              type="monotone" 
+              dataKey="cumulative_gpa" 
+              stroke="#3b82f6" 
+              strokeWidth={4}
+              name="Cumulative GPA"
+              dot={(props: any) => {
+                const { payload } = props
+                if (payload?.isProjected) {
+                  return <circle cx={props.cx} cy={props.cy} r={4} fill="#3b82f6" opacity={0.6} />
+                }
+                return <circle cx={props.cx} cy={props.cy} r={7} fill="#3b82f6" stroke="#fff" strokeWidth={2.5} />
+              }}
+              activeDot={{ r: 12, stroke: '#3b82f6', strokeWidth: 3, fill: '#fff' }}
               strokeDasharray={undefined}
               animationDuration={800}
             />
@@ -177,11 +197,28 @@ export function GPATrendChart({
                   stroke="#f59e0b" 
                   strokeWidth={2}
                   strokeDasharray="5 5"
-                  name="GPA (Projected)"
+                  name="Term GPA (Projected)"
                   dot={(props: any) => {
                     const { payload } = props
                     if (payload?.isProjected) {
                       return <circle cx={props.cx} cy={props.cy} r={4} fill="#f59e0b" opacity={0.6} />
+                    }
+                    return null
+                  }}
+                  connectNulls={true}
+                  data={data}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="cumulative_gpa" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  name="Cumulative GPA (Projected)"
+                  dot={(props: any) => {
+                    const { payload } = props
+                    if (payload?.isProjected) {
+                      return <circle cx={props.cx} cy={props.cy} r={4} fill="#3b82f6" opacity={0.6} />
                     }
                     return null
                   }}

@@ -56,6 +56,18 @@ function DashboardContent() {
     return (displayAnalytics.grade_distribution || []).filter(grade => grade.count > 0)
   }, [displayAnalytics.grade_distribution])
 
+  // Get the calculated cumulative GPA from the GPA trend (last term's cumulative GPA)
+  // This is the progressive cumulative GPA calculated from term GPAs
+  const calculatedCumulativeGpa = useMemo(() => {
+    const gpaTrend = displayAnalytics.gpa_trend || []
+    if (gpaTrend.length > 0) {
+      // Get the last item's cumulative GPA - this is the calculated cumulative GPA
+      const lastTerm = gpaTrend[gpaTrend.length - 1]
+      return lastTerm.cumulative_gpa
+    }
+    return undefined
+  }, [displayAnalytics.gpa_trend])
+
   return (
     <main className="min-h-screen bg-white dark:bg-black content-with-nav">
       <DashboardHeader />
@@ -93,6 +105,7 @@ function DashboardContent() {
 
           <SummaryStats
             overallGpa={displayAnalytics.overall_gpa}
+            cumulativeGpa={calculatedCumulativeGpa}
             totalCredits={displayAnalytics.total_credits}
             totalCourses={displayAnalytics.total_courses}
             departmentCount={displayAnalytics.course_distribution_by_department?.length || 0}
