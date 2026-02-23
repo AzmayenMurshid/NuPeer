@@ -15,26 +15,9 @@ from app.services.points_service import award_points
 
 router = APIRouter()
 
-# Admin emails - can be moved to environment variables or database
-ADMIN_EMAILS = [
-    "admin@nupeer.com",
-    "admin@sigmanu.com",
-    # Add more admin emails as needed
-]
-
-
-def is_admin(user: User) -> bool:
-    """Check if user is an admin"""
-    return user.email.lower() in [email.lower() for email in ADMIN_EMAILS]
-
-
+# Admin access is now controlled by password only (no email check required)
 def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    """Dependency to ensure user is an admin"""
-    if not is_admin(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
+    """Dependency to get current user (password protection handled on frontend)"""
     return current_user
 
 
@@ -163,9 +146,9 @@ async def update_user_points(
 async def check_admin_status(
     current_user: User = Depends(get_current_user)
 ):
-    """Check if current user is an admin"""
+    """Check admin status (password-only protection, always returns true if authenticated)"""
     return {
-        "is_admin": is_admin(current_user),
+        "is_admin": True,  # Password protection handled on frontend
         "email": current_user.email
     }
 
