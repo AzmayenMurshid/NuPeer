@@ -131,6 +131,8 @@ app.include_router(mentorship.router, prefix="/api/v1/mentorship", tags=["Mentor
 app.include_router(points.router, prefix="/api/v1", tags=["Points"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(battle_buddy.router, prefix="/api/v1/admin/battle-buddy", tags=["Battle Buddy"])
+# Public battle buddy endpoint for users to get their own team (same router, different prefix)
+app.include_router(battle_buddy.router, prefix="/api/v1/battle-buddy", tags=["Battle Buddy"])
 app.include_router(academic_teams.router, prefix="/api/v1/admin/academic-teams", tags=["Academic Teams"])
 
 @app.on_event("startup")
