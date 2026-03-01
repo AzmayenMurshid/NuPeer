@@ -6,8 +6,7 @@ import { useAcademicAnalytics } from '@/lib/hooks/useAnalytics'
 import { useMajorMatchBrothers } from '@/lib/hooks/useHelpRequests'
 import { useCourses } from '@/lib/hooks/useCourses'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
-import { QuickActions } from '@/components/dashboard/QuickActions'
-import { CalendarWidget } from '@/components/dashboard/CalendarWidget'
+import { DashboardNavBar } from '@/components/dashboard/DashboardNavBar'
 import { CurrentCourses } from '@/components/dashboard/CurrentCourses'
 import { BattleBuddyTeam } from '@/components/dashboard/BattleBuddyTeam'
 import { BrothersInMajor } from '@/components/dashboard/BrothersInMajor'
@@ -72,9 +71,7 @@ function DashboardContent() {
       <DashboardHeader />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <QuickActions />
-
-        <CalendarWidget />
+        <DashboardNavBar />
 
         <CurrentCourses courses={currentCourses} />
 
