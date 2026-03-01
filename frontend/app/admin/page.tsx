@@ -799,10 +799,17 @@ export default function AdminPage() {
                 teams.map((team) => (
                   <div
                     key={team.id}
-                    className={`p-4 rounded-lg transition-colors ${
+                    onClick={() => {
+                      setSelectedTeam(team)
+                      setTeamPointsToAdd('')
+                      setTeamPointsDescription('')
+                      setMemberSearchQuery('')
+                      setMemberSearchResults([])
+                    }}
+                    className={`p-4 rounded-lg transition-colors cursor-pointer ${
                       selectedTeam?.id === team.id
                         ? 'bg-gray-100 dark:bg-gray-800'
-                        : 'bg-gray-50 dark:bg-gray-900'
+                        : 'bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -822,19 +829,10 @@ export default function AdminPage() {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => {
-                            setSelectedTeam(team)
-                            setTeamPointsToAdd('')
-                            setTeamPointsDescription('')
-                            setMemberSearchQuery('')
-                            setMemberSearchResults([])
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteTeam(team.id)
                           }}
-                          className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700"
-                        >
-                          {selectedTeam?.id === team.id ? 'Selected' : 'Select'}
-                        </button>
-                        <button
-                          onClick={() => deleteTeam(team.id)}
                           className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -856,7 +854,10 @@ export default function AdminPage() {
                               {member.first_name} {member.last_name}
                               {selectedTeam?.id === team.id && (
                                 <button
-                                  onClick={() => removeMemberFromTeam(member.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    removeMemberFromTeam(member.id)
+                                  }}
                                   className="text-red-500 hover:text-red-700"
                                   title="Remove member"
                                 >
