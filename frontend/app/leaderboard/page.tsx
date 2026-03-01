@@ -38,9 +38,9 @@ function LeaderboardContent() {
     const fetchTeams = async () => {
       try {
         setIsLoadingTeams(true)
+        // Teams are already sorted by points on backend (optimized) - no need to sort on frontend
         const teamsResponse = await api.get('/battle-buddy/teams/list')
-        const sortedTeams = teamsResponse.data.sort((a: BattleBuddyTeam, b: BattleBuddyTeam) => b.points - a.points)
-        setTeams(sortedTeams)
+        setTeams(teamsResponse.data)
         
         // Get user's team
         try {

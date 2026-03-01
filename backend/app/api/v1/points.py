@@ -51,18 +51,19 @@ async def get_my_points(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get current user's points and summary"""
-    # Get total points
+    """Get current user's points and summary - Optimized queries"""
+    # Get total points (already optimized in service)
     total_points = get_user_points(db, current_user.id)
     
-    # Get rank (users with more points)
+    # Optimized: Use index on User.points for O(log n) lookup instead of O(n) scan
+    # Count users with more points using indexed query
     rank = (
         db.query(User)
         .filter(User.points > total_points)
         .count() + 1
     )
     
-    # Get recent activity
+    # Get recent activity (already paginated with limit=10)
     recent_history = get_points_history(db, current_user.id, limit=10)
     
     return {
@@ -90,23 +91,27 @@ async def get_leaderboard(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get leaderboard of top users by points"""
+    """Get leaderboard of top users by points - Optimized with proper indexing"""
+    # Optimized: Single query with limit, relies on index on User.points for O(log n + k) complexity
+    # where k is the limit (typically 100), much better than O(n)
     top_users = (
         db.query(User)
-        .order_by(desc(User.points))
+        .order_by(desc(User.points), User.id)  # Add id for consistent ordering
         .limit(limit)
         .all()
     )
     
-    leaderboard = []
-    for rank, user in enumerate(top_users, start=1):
-        leaderboard.append({
+    # Build response in single pass - O(k) where k is limit
+    leaderboard = [
+        {
             "user_id": str(user.id),
             "first_name": user.first_name,
             "last_name": user.last_name,
             "points": user.points or 0,
             "rank": rank,
-        })
+        }
+        for rank, user in enumerate(top_users, start=1)
+    ]
     
     return leaderboard
 

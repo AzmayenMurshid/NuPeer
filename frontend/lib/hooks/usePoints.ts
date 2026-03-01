@@ -37,6 +37,8 @@ export const usePoints = () => {
       const response = await api.get<PointsSummary>('/points')
       return response.data
     },
+    staleTime: 30000, // 30 seconds - cache for better performance
+    gcTime: 300000, // 5 minutes - keep in cache
   })
 }
 
@@ -49,6 +51,8 @@ export const usePointsHistory = (limit = 50, offset = 0) => {
       })
       return response.data
     },
+    staleTime: 60000, // 1 minute - history changes less frequently
+    gcTime: 600000, // 10 minutes
   })
 }
 
@@ -61,6 +65,8 @@ export const useLeaderboard = (limit = 100) => {
       })
       return response.data
     },
+    staleTime: 120000, // 2 minutes - leaderboard updates less frequently
+    gcTime: 600000, // 10 minutes
   })
 }
 
@@ -71,6 +77,8 @@ export const usePointValues = () => {
       const response = await api.get<PointValues>('/points/values')
       return response.data
     },
+    staleTime: 3600000, // 1 hour - point values rarely change
+    gcTime: 7200000, // 2 hours
   })
 }
 
