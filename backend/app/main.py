@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from typing import List
-from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, calendar, mentorship, points, admin, battle_buddy
+from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, calendar, mentorship, points, admin, battle_buddy, academic_teams
 from app.core.config import settings
 
 # Configure logging
@@ -131,6 +131,7 @@ app.include_router(mentorship.router, prefix="/api/v1/mentorship", tags=["Mentor
 app.include_router(points.router, prefix="/api/v1", tags=["Points"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(battle_buddy.router, prefix="/api/v1/admin/battle-buddy", tags=["Battle Buddy"])
+app.include_router(academic_teams.router, prefix="/api/v1/admin/academic-teams", tags=["Academic Teams"])
 
 @app.on_event("startup")
 async def startup_event():
