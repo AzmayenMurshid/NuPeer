@@ -629,8 +629,8 @@ export default function AdminPage() {
                     }}
                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
                       selectedUser?.id === user.id
-                        ? 'bg-primary-50 dark:bg-primary-900/20 border-2 border-primary-500'
-                        : 'bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-gray-100 dark:bg-gray-800'
+                        : 'bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     <div className="flex justify-between items-center">
@@ -728,7 +728,7 @@ export default function AdminPage() {
           )}
 
           {/* Battle Buddy Teams Section */}
-          <div className="card p-6 mt-6 border-2 border-blue-200 dark:border-blue-800">
+          <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -746,7 +746,7 @@ export default function AdminPage() {
                   setNewTeamDescription('')
                   setMessage(null)
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 {showCreateTeam ? 'Cancel' : 'Create Team'}
@@ -755,7 +755,7 @@ export default function AdminPage() {
 
             {/* Create Team Form */}
             {showCreateTeam && (
-              <form onSubmit={(e) => { e.preventDefault(); createTeam(); }} className="space-y-4 mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <form onSubmit={(e) => { e.preventDefault(); createTeam(); }} className="space-y-4 mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Team Name *
@@ -765,7 +765,7 @@ export default function AdminPage() {
                     value={newTeamName}
                     onChange={(e) => setNewTeamName(e.target.value)}
                     placeholder="Enter team name"
-                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
                 </div>
@@ -778,13 +778,13 @@ export default function AdminPage() {
                     value={newTeamDescription}
                     onChange={(e) => setNewTeamDescription(e.target.value)}
                     placeholder="Team description..."
-                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create Team'}
                 </button>
@@ -799,17 +799,17 @@ export default function AdminPage() {
                 teams.map((team) => (
                   <div
                     key={team.id}
-                    className={`p-4 rounded-lg border-2 transition-colors ${
+                    className={`p-4 rounded-lg transition-colors ${
                       selectedTeam?.id === team.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                        ? 'bg-gray-100 dark:bg-gray-800'
+                        : 'bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{team.team_name}</h3>
-                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm font-medium">
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded text-sm font-medium">
                             {team.points} pts
                           </span>
                         </div>
@@ -829,7 +829,7 @@ export default function AdminPage() {
                             setMemberSearchQuery('')
                             setMemberSearchResults([])
                           }}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                          className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700"
                         >
                           {selectedTeam?.id === team.id ? 'Selected' : 'Select'}
                         </button>
@@ -845,7 +845,7 @@ export default function AdminPage() {
 
                     {/* Team Members */}
                     {team.members.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Members:</p>
                         <div className="flex flex-wrap gap-2">
                           {team.members.map((member: any) => (
@@ -875,7 +875,7 @@ export default function AdminPage() {
 
             {/* Selected Team Management */}
             {selectedTeam && (
-              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Manage Team: {selectedTeam.team_name}
                 </h3>
@@ -892,13 +892,13 @@ export default function AdminPage() {
                         onChange={(e) => setMemberSearchQuery(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && searchUsersForTeam()}
                         placeholder="Search by first name, last name, or email..."
-                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                     <button
                       onClick={searchUsersForTeam}
                       disabled={loading}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Search
                     </button>
@@ -930,7 +930,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => addMemberToTeam(user.id)}
                                 disabled={loading}
-                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+                                className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 disabled:opacity-50"
                               >
                                 Add
                               </button>
@@ -962,7 +962,7 @@ export default function AdminPage() {
                       value={teamPointsToAdd}
                       onChange={(e) => setTeamPointsToAdd(e.target.value)}
                       placeholder="Enter points (negative to remove)"
-                      className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                     <button
                       onClick={() => {
@@ -979,12 +979,12 @@ export default function AdminPage() {
                     value={teamPointsDescription}
                     onChange={(e) => setTeamPointsDescription(e.target.value)}
                     placeholder="Description (optional)"
-                    className="w-full mb-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full mb-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <button
                     onClick={updateTeamPoints}
                     disabled={loading || !teamPointsToAdd || parseInt(teamPointsToAdd) === 0}
-                    className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Updating...' : 'Update Team Points'}
                   </button>
@@ -994,7 +994,7 @@ export default function AdminPage() {
           </div>
 
           {/* Academic Teams Section */}
-          <div className="card p-6 mt-6 border-2 border-green-200 dark:border-green-800">
+          <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1012,7 +1012,7 @@ export default function AdminPage() {
                   setNewAcademicTeamDescription('')
                   setMessage(null)
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-2"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 {showCreateAcademicTeam ? 'Cancel' : 'Create Team'}
@@ -1021,7 +1021,7 @@ export default function AdminPage() {
 
             {/* Create Academic Team Form */}
             {showCreateAcademicTeam && (
-              <form onSubmit={(e) => { e.preventDefault(); createAcademicTeam(); }} className="space-y-4 mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <form onSubmit={(e) => { e.preventDefault(); createAcademicTeam(); }} className="space-y-4 mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Team Name *
@@ -1050,7 +1050,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create Team'}
                 </button>
@@ -1065,10 +1065,10 @@ export default function AdminPage() {
                 academicTeams.map((team) => (
                   <div
                     key={team.id}
-                    className={`p-4 rounded-lg border-2 transition-colors ${
+                    className={`p-4 rounded-lg transition-colors ${
                       selectedAcademicTeam?.id === team.id
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                        ? 'bg-gray-100 dark:bg-gray-800'
+                        : 'bg-gray-50 dark:bg-gray-900'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -1090,7 +1090,7 @@ export default function AdminPage() {
                             setAcademicMemberSearchQuery('')
                             setAcademicMemberSearchResults([])
                           }}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                          className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700"
                         >
                           {selectedAcademicTeam?.id === team.id ? 'Selected' : 'Select'}
                         </button>
@@ -1106,7 +1106,7 @@ export default function AdminPage() {
 
                     {/* Team Members */}
                     {team.members.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
                         <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Members:</p>
                         <div className="flex flex-wrap gap-2">
                           {team.members.map((member: any) => (
@@ -1136,7 +1136,7 @@ export default function AdminPage() {
 
             {/* Selected Academic Team Management */}
             {selectedAcademicTeam && (
-              <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                   Manage Team: {selectedAcademicTeam.team_name}
                 </h3>
@@ -1159,7 +1159,7 @@ export default function AdminPage() {
                     <button
                       onClick={searchUsersForAcademicTeam}
                       disabled={loading}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Search
                     </button>
@@ -1191,7 +1191,7 @@ export default function AdminPage() {
                               <button
                                 onClick={() => addMemberToAcademicTeam(user.id)}
                                 disabled={loading}
-                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                                className="px-3 py-1 bg-primary-600 text-white rounded text-sm hover:bg-primary-700 disabled:opacity-50"
                               >
                                 Add
                               </button>
@@ -1207,7 +1207,7 @@ export default function AdminPage() {
           </div>
 
           {/* Password Change Section */}
-          <div className="card p-6 mt-6 border-2 border-yellow-200 dark:border-yellow-800">
+          <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Change Admin Password</h2>
@@ -1223,7 +1223,7 @@ export default function AdminPage() {
                   setConfirmNewPassword('')
                   setMessage(null)
                 }}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm font-medium"
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
               >
                 {showPasswordChange ? 'Cancel' : 'Change Password'}
               </button>
@@ -1277,7 +1277,7 @@ export default function AdminPage() {
                 </div>
                 <button
                   type="submit"
-                  className="w-full px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium"
+                  className="w-full px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium"
                 >
                   Update Admin Password
                 </button>
