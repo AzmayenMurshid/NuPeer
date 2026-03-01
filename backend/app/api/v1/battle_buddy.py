@@ -62,12 +62,16 @@ class UpdateTeamPointsRequest(BaseModel):
     description: Optional[str] = "Admin adjustment"
 
 
+class JoinTeamRequest(BaseModel):
+    team_id: str
+
+
 @router.get("/teams", response_model=List[BattleBuddyTeamResponse])
 async def get_all_teams(
     admin_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get all battle buddy teams"""
+    """Get all battle buddy teams (admin only - includes all member details)"""
     teams = db.query(BattleBuddyTeam).order_by(BattleBuddyTeam.points.desc(), BattleBuddyTeam.team_name).all()
     
     result = []
@@ -93,6 +97,43 @@ async def get_all_teams(
             points=team.points or 0,
             member_count=len(member_responses),
             members=member_responses,
+            created_at=team.created_at.isoformat() if team.created_at else ""
+        ))
+    
+    return result
+
+
+class PublicTeamResponse(BaseModel):
+    """Public team response without member details"""
+    id: str
+    team_name: str
+    description: Optional[str]
+    points: int
+    member_count: int
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.get("/teams/list", response_model=List[PublicTeamResponse])
+async def list_teams(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get list of all battle buddy teams (public - for users to see available teams to join)"""
+    teams = db.query(BattleBuddyTeam).order_by(BattleBuddyTeam.points.desc(), BattleBuddyTeam.team_name).all()
+    
+    result = []
+    for team in teams:
+        member_count = db.query(BattleBuddyMember).filter(BattleBuddyMember.team_id == team.id).count()
+        
+        result.append(PublicTeamResponse(
+            id=str(team.id),
+            team_name=team.team_name,
+            description=team.description,
+            points=team.points or 0,
+            member_count=member_count,
             created_at=team.created_at.isoformat() if team.created_at else ""
         ))
     
@@ -353,3 +394,70 @@ async def get_my_team(
         members=member_responses,
         created_at=team.created_at.isoformat() if team.created_at else ""
     )
+
+
+class JoinTeamRequest(BaseModel):
+    team_id: str
+
+
+@router.post("/join-team", status_code=status.HTTP_201_CREATED)
+async def join_team(
+    request: JoinTeamRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Allow users to join a battle buddy team themselves"""
+    try:
+        team_id = uuid.UUID(request.team_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid team_id format"
+        )
+    
+    # Check if team exists
+    team = db.query(BattleBuddyTeam).filter(BattleBuddyTeam.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Check if user is already in a team
+    existing_member = db.query(BattleBuddyMember).filter(BattleBuddyMember.user_id == current_user.id).first()
+    if existing_member:
+        existing_team = db.query(BattleBuddyTeam).filter(BattleBuddyTeam.id == existing_member.team_id).first()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You are already a member of team '{existing_team.team_name if existing_team else 'Unknown'}'. You can only be in one team at a time."
+        )
+    
+    # Check if user is already in this team
+    existing_in_team = db.query(BattleBuddyMember).filter(
+        and_(
+            BattleBuddyMember.team_id == team_id,
+            BattleBuddyMember.user_id == current_user.id
+        )
+    ).first()
+    if existing_in_team:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are already a member of this team"
+        )
+    
+    # Add member
+    member = BattleBuddyMember(
+        team_id=team_id,
+        user_id=current_user.id
+    )
+    
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+    
+    return {
+        "success": True,
+        "message": f"Successfully joined team '{team.team_name}'",
+        "member_id": str(member.id),
+        "team_name": team.team_name
+    }
