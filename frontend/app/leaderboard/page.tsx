@@ -1,11 +1,13 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useLeaderboard, usePoints } from '@/lib/hooks/usePoints'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Trophy, Medal, Award, TrendingUp, Users } from 'lucide-react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { api } from '@/lib/api'
 
 export default function LeaderboardPage() {
   return (
@@ -15,10 +17,50 @@ export default function LeaderboardPage() {
   )
 }
 
+interface BattleBuddyTeam {
+  id: string
+  team_name: string
+  description?: string
+  points: number
+  member_count: number
+  created_at: string
+}
+
 function LeaderboardContent() {
   const { user } = useAuth()
   const { data: leaderboard, isLoading } = useLeaderboard(100)
   const { data: myPoints } = usePoints()
+  const [teams, setTeams] = useState<BattleBuddyTeam[]>([])
+  const [isLoadingTeams, setIsLoadingTeams] = useState(true)
+  const [myTeam, setMyTeam] = useState<BattleBuddyTeam | null>(null)
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        setIsLoadingTeams(true)
+        const teamsResponse = await api.get('/battle-buddy/teams/list')
+        const sortedTeams = teamsResponse.data.sort((a: BattleBuddyTeam, b: BattleBuddyTeam) => b.points - a.points)
+        setTeams(sortedTeams)
+        
+        // Get user's team
+        try {
+          const myTeamResponse = await api.get('/battle-buddy/my-team')
+          if (myTeamResponse.data) {
+            setMyTeam(myTeamResponse.data)
+          }
+        } catch (err) {
+          // User not in a team - that's fine
+          setMyTeam(null)
+        }
+      } catch (err) {
+        console.error('Failed to fetch teams:', err)
+      } finally {
+        setIsLoadingTeams(false)
+      }
+    }
+
+    fetchTeams()
+  }, [])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Trophy className="w-6 h-6 text-yellow-500" />
@@ -139,6 +181,106 @@ function LeaderboardContent() {
             <h3 className="text-xl font-semibold text-heading mb-2">No rankings yet</h3>
             <p className="text-muted">
               Start helping others to earn points and climb the leaderboard!
+            </p>
+          </div>
+        )}
+
+        {/* Battle Buddy Teams Leaderboard */}
+        <div className="mt-8 mb-6">
+          <h2 className="page-title flex items-center gap-3 mb-2">
+            <Users className="w-6 h-6 text-primary-500" />
+            Battle Buddy Teams Leaderboard
+          </h2>
+          <p className="text-muted">
+            Top Battle Buddy teams competing for academic excellence
+          </p>
+        </div>
+
+        {/* My Team Stats Card */}
+        {myTeam && (
+          <div className="card card-padding mb-6 bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted mb-1">Your Team</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-heading">
+                    {myTeam.team_name}
+                  </span>
+                  <span className="text-lg text-muted">
+                    {myTeam.points} points
+                  </span>
+                </div>
+                <p className="text-sm text-muted mt-1">
+                  Rank #{teams.findIndex(t => t.id === myTeam.id) + 1} • {myTeam.member_count} member{myTeam.member_count !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <Users className="w-12 h-12 text-blue-500" />
+            </div>
+          </div>
+        )}
+
+        {/* Teams Leaderboard */}
+        {isLoadingTeams ? (
+          <div className="card card-padding text-center py-12">
+            <div className="loading-spinner"></div>
+            <p className="loading-text">Loading teams leaderboard...</p>
+          </div>
+        ) : teams && teams.length > 0 ? (
+          <div className="card card-padding mb-6">
+            <div className="space-y-3">
+              {teams.map((team, index) => {
+                const rank = index + 1
+                const isMyTeam = myTeam?.id === team.id
+                return (
+                  <div
+                    key={team.id}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      isMyTeam
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                        : 'border-gray-200 dark:border-gray-800 hover:border-primary-200 dark:hover:border-primary-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0 w-12 flex items-center justify-center">
+                        {getRankIcon(rank)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-heading">
+                            {team.team_name}
+                          </span>
+                          {isMyTeam && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-500 text-white rounded-full">
+                              Your Team
+                            </span>
+                          )}
+                        </div>
+                        {team.description && (
+                          <p className="text-sm text-muted mb-1">{team.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-muted">
+                          <span className="font-medium">{team.points.toLocaleString()} points</span>
+                          <span className="text-xs">•</span>
+                          <span className="text-xs">{team.member_count} member{team.member_count !== 1 ? 's' : ''}</span>
+                          <span className="text-xs">•</span>
+                          <span className="text-xs">Rank #{rank}</span>
+                        </div>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${getRankBadgeColor(rank)}`}>
+                        #{rank}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="card card-padding text-center py-12 mb-6">
+            <Users className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-heading mb-2">No teams yet</h3>
+            <p className="text-muted">
+              Battle Buddy teams will appear here once they're created.
             </p>
           </div>
         )}
