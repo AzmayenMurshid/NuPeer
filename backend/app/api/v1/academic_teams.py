@@ -2,8 +2,8 @@
 Academic Teams API endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, func
 from pydantic import BaseModel
 from typing import Optional, List
 import uuid
@@ -60,22 +60,26 @@ async def get_all_teams(
     admin_user: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get all academic teams"""
-    teams = db.query(AcademicTeam).order_by(AcademicTeam.team_name).all()
+    """Get all academic teams - Optimized with joinedload to avoid N+1 queries"""
+    # Optimized: Use joinedload to batch load members and users in single query (O(n) instead of O(n*m))
+    teams = (
+        db.query(AcademicTeam)
+        .options(joinedload(AcademicTeam.members).joinedload(AcademicTeamMember.user))
+        .order_by(AcademicTeam.team_name)
+        .all()
+    )
     
     result = []
     for team in teams:
-        members = db.query(AcademicTeamMember).filter(AcademicTeamMember.team_id == team.id).all()
         member_responses = []
-        for member in members:
-            user = db.query(User).filter(User.id == member.user_id).first()
-            if user:
+        for member in team.members:
+            if member.user:
                 member_responses.append(TeamMemberResponse(
                     id=str(member.id),
                     user_id=str(member.user_id),
-                    first_name=user.first_name,
-                    last_name=user.last_name,
-                    email=user.email,
+                    first_name=member.user.first_name,
+                    last_name=member.user.last_name,
+                    email=member.user.email,
                     joined_at=member.joined_at.isoformat() if member.joined_at else ""
                 ))
         
