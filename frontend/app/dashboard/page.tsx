@@ -3,13 +3,13 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAcademicAnalytics } from '@/lib/hooks/useAnalytics'
-import { useMajorMatchBrothers, useGroupStudyBrothers } from '@/lib/hooks/useHelpRequests'
+import { useMajorMatchBrothers } from '@/lib/hooks/useHelpRequests'
 import { useCourses } from '@/lib/hooks/useCourses'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { QuickActions } from '@/components/dashboard/QuickActions'
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget'
 import { CurrentCourses } from '@/components/dashboard/CurrentCourses'
-import { GroupStudyRecommendations } from '@/components/dashboard/GroupStudyRecommendations'
+import { BattleBuddyTeam } from '@/components/dashboard/BattleBuddyTeam'
 import { BrothersInMajor } from '@/components/dashboard/BrothersInMajor'
 import { SummaryStats } from '@/components/dashboard/SummaryStats'
 import { AcademicTrendsChart } from '@/components/dashboard/AcademicTrendsChart'
@@ -27,7 +27,6 @@ function DashboardContent() {
   const { user } = useAuth()
   const { data: analytics } = useAcademicAnalytics()
   const { data: majorMatchBrothers, isLoading: isLoadingMajorMatch, error: majorMatchError } = useMajorMatchBrothers(6)
-  const { data: groupStudyBrothers, isLoading: isLoadingGroupStudy, error: groupStudyError } = useGroupStudyBrothers(6)
   const { data: courses } = useCourses()
   
   // Filter to only show manually added courses (current courses)
@@ -79,7 +78,7 @@ function DashboardContent() {
 
         <CurrentCourses courses={currentCourses} />
 
-        {/* Brothers in Major and Group Study Recommendations - Side by Side */}
+        {/* Brothers in Major and Battle Buddy Team - Side by Side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <BrothersInMajor 
             major={user?.major || ''}
@@ -87,13 +86,7 @@ function DashboardContent() {
             isLoading={isLoadingMajorMatch}
             error={majorMatchError}
           />
-          <GroupStudyRecommendations
-            brothers={groupStudyBrothers || []}
-            isLoading={isLoadingGroupStudy}
-            error={groupStudyError}
-            userMajor={user?.major}
-            currentCourses={currentCourses}
-          />
+          <BattleBuddyTeam />
         </div>
 
         {/* Academic Analytics Section - Always show */}

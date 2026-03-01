@@ -311,3 +311,45 @@ async def delete_team(
         "message": f"Team '{team_name}' and all its members have been deleted"
     }
 
+
+@router.get("/my-team", response_model=Optional[BattleBuddyTeamResponse])
+async def get_my_team(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the current user's battle buddy team"""
+    # Find if user is a member of any team
+    member = db.query(BattleBuddyMember).filter(BattleBuddyMember.user_id == current_user.id).first()
+    
+    if not member:
+        return None
+    
+    # Get the team
+    team = db.query(BattleBuddyTeam).filter(BattleBuddyTeam.id == member.team_id).first()
+    if not team:
+        return None
+    
+    # Get all members of the team
+    members = db.query(BattleBuddyMember).filter(BattleBuddyMember.team_id == team.id).all()
+    member_responses = []
+    for team_member in members:
+        user = db.query(User).filter(User.id == team_member.user_id).first()
+        if user:
+            member_responses.append(TeamMemberResponse(
+                id=str(team_member.id),
+                user_id=str(team_member.user_id),
+                first_name=user.first_name,
+                last_name=user.last_name,
+                email=user.email,
+                joined_at=team_member.joined_at.isoformat() if team_member.joined_at else ""
+            ))
+    
+    return BattleBuddyTeamResponse(
+        id=str(team.id),
+        team_name=team.team_name,
+        description=team.description,
+        points=team.points or 0,
+        member_count=len(member_responses),
+        members=member_responses,
+        created_at=team.created_at.isoformat() if team.created_at else ""
+    )
