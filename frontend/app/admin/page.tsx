@@ -67,6 +67,15 @@ export default function AdminPage() {
   const [teamPointsDescription, setTeamPointsDescription] = useState('')
   const [memberSearchQuery, setMemberSearchQuery] = useState('')
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([])
+  
+  // Academic Teams state
+  const [academicTeams, setAcademicTeams] = useState<any[]>([])
+  const [showCreateAcademicTeam, setShowCreateAcademicTeam] = useState(false)
+  const [newAcademicTeamName, setNewAcademicTeamName] = useState('')
+  const [newAcademicTeamDescription, setNewAcademicTeamDescription] = useState('')
+  const [selectedAcademicTeam, setSelectedAcademicTeam] = useState<any | null>(null)
+  const [academicMemberSearchQuery, setAcademicMemberSearchQuery] = useState('')
+  const [academicMemberSearchResults, setAcademicMemberSearchResults] = useState<User[]>([])
 
   // Check if password is already verified in session
   useEffect(() => {
@@ -367,10 +376,146 @@ export default function AdminPage() {
     }
   }
 
+  // Academic Teams functions
+  const loadAcademicTeams = async () => {
+    setLoading(true)
+    try {
+      const response = await api.get('/admin/academic-teams/teams')
+      setAcademicTeams(response.data)
+      setMessage(null)
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to load academic teams' 
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createAcademicTeam = async () => {
+    if (!newAcademicTeamName.trim()) {
+      setMessage({ type: 'error', text: 'Team name is required' })
+      return
+    }
+
+    setLoading(true)
+    try {
+      await api.post('/admin/academic-teams/teams', {
+        team_name: newAcademicTeamName,
+        description: newAcademicTeamDescription || null
+      })
+      setMessage({ type: 'success', text: `Academic team "${newAcademicTeamName}" created successfully!` })
+      setNewAcademicTeamName('')
+      setNewAcademicTeamDescription('')
+      setShowCreateAcademicTeam(false)
+      loadAcademicTeams()
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to create academic team' 
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const searchUsersForAcademicTeam = async () => {
+    if (!academicMemberSearchQuery.trim()) {
+      setAcademicMemberSearchResults([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await api.get(`/admin/users/search?query=${encodeURIComponent(academicMemberSearchQuery)}&limit=20`)
+      setAcademicMemberSearchResults(response.data)
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to search users' 
+      })
+      setAcademicMemberSearchResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addMemberToAcademicTeam = async (userId: string) => {
+    if (!selectedAcademicTeam) return
+
+    setLoading(true)
+    try {
+      await api.post('/admin/academic-teams/teams/members', {
+        team_id: selectedAcademicTeam.id,
+        user_id: userId
+      })
+      setMessage({ type: 'success', text: 'Member added to academic team successfully!' })
+      setAcademicMemberSearchQuery('')
+      setAcademicMemberSearchResults([])
+      loadAcademicTeams()
+      // Update selected team
+      const updatedTeams = await api.get('/admin/academic-teams/teams')
+      const updatedTeam = updatedTeams.data.find((t: any) => t.id === selectedAcademicTeam.id)
+      if (updatedTeam) setSelectedAcademicTeam(updatedTeam)
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to add member to academic team' 
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const removeMemberFromAcademicTeam = async (memberId: string) => {
+    setLoading(true)
+    try {
+      await api.delete(`/admin/academic-teams/teams/members/${memberId}`)
+      setMessage({ type: 'success', text: 'Member removed from academic team successfully!' })
+      loadAcademicTeams()
+      // Update selected team
+      const updatedTeams = await api.get('/admin/academic-teams/teams')
+      const updatedTeam = updatedTeams.data.find((t: any) => t.id === selectedAcademicTeam?.id)
+      if (updatedTeam) setSelectedAcademicTeam(updatedTeam)
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to remove member from academic team' 
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteAcademicTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to delete this academic team? This will remove all members.')) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      await api.delete(`/admin/academic-teams/teams/${teamId}`)
+      setMessage({ type: 'success', text: 'Academic team deleted successfully!' })
+      if (selectedAcademicTeam?.id === teamId) {
+        setSelectedAcademicTeam(null)
+      }
+      loadAcademicTeams()
+    } catch (error: any) {
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.detail || 'Failed to delete academic team' 
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Load teams on mount
   useEffect(() => {
     if (isPasswordVerified) {
       loadTeams()
+      loadAcademicTeams()
     }
   }, [isPasswordVerified])
 
@@ -843,6 +988,219 @@ export default function AdminPage() {
                   >
                     {loading ? 'Updating...' : 'Update Team Points'}
                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Academic Teams Section */}
+          <div className="card p-6 mt-6 border-2 border-green-200 dark:border-green-800">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Academic Teams
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Manage academic teams and assign users to teams
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCreateAcademicTeam(!showCreateAcademicTeam)
+                  setNewAcademicTeamName('')
+                  setNewAcademicTeamDescription('')
+                  setMessage(null)
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                {showCreateAcademicTeam ? 'Cancel' : 'Create Team'}
+              </button>
+            </div>
+
+            {/* Create Academic Team Form */}
+            {showCreateAcademicTeam && (
+              <form onSubmit={(e) => { e.preventDefault(); createAcademicTeam(); }} className="space-y-4 mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Team Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newAcademicTeamName}
+                    onChange={(e) => setNewAcademicTeamName(e.target.value)}
+                    placeholder="Enter team name"
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newAcademicTeamDescription}
+                    onChange={(e) => setNewAcademicTeamDescription(e.target.value)}
+                    placeholder="Team description..."
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Creating...' : 'Create Team'}
+                </button>
+              </form>
+            )}
+
+            {/* Academic Teams List */}
+            <div className="space-y-4">
+              {academicTeams.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No academic teams created yet</p>
+              ) : (
+                academicTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className={`p-4 rounded-lg border-2 transition-colors ${
+                      selectedAcademicTeam?.id === team.id
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{team.team_name}</h3>
+                        </div>
+                        {team.description && (
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{team.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          {team.member_count} member{team.member_count !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedAcademicTeam(team)
+                            setAcademicMemberSearchQuery('')
+                            setAcademicMemberSearchResults([])
+                          }}
+                          className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                        >
+                          {selectedAcademicTeam?.id === team.id ? 'Selected' : 'Select'}
+                        </button>
+                        <button
+                          onClick={() => deleteAcademicTeam(team.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Team Members */}
+                    {team.members.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Members:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {team.members.map((member: any) => (
+                            <div
+                              key={member.id}
+                              className="px-2 py-1 bg-white dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1"
+                            >
+                              {member.first_name} {member.last_name}
+                              {selectedAcademicTeam?.id === team.id && (
+                                <button
+                                  onClick={() => removeMemberFromAcademicTeam(member.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="Remove member"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Selected Academic Team Management */}
+            {selectedAcademicTeam && (
+              <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Manage Team: {selectedAcademicTeam.team_name}
+                </h3>
+
+                {/* Add Member Section */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add Member</h4>
+                  <div className="flex gap-3">
+                    <div className="flex-1 relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={academicMemberSearchQuery}
+                        onChange={(e) => setAcademicMemberSearchQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && searchUsersForAcademicTeam()}
+                        placeholder="Search by first name, last name, or email..."
+                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <button
+                      onClick={searchUsersForAcademicTeam}
+                      disabled={loading}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Search
+                    </button>
+                  </div>
+
+                  {/* Member Search Results */}
+                  {academicMemberSearchResults.length > 0 && (
+                    <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                      {academicMemberSearchResults.map((user) => {
+                        const isAlreadyMember = selectedAcademicTeam.members.some((m: any) => m.user_id === user.id)
+                        return (
+                          <div
+                            key={user.id}
+                            className={`p-2 rounded flex justify-between items-center ${
+                              isAlreadyMember
+                                ? 'bg-gray-100 dark:bg-gray-700 opacity-50'
+                                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                            }`}
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {user.first_name} {user.last_name}
+                              </p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{user.email}</p>
+                            </div>
+                            {isAlreadyMember ? (
+                              <span className="text-xs text-gray-500">Already in team</span>
+                            ) : (
+                              <button
+                                onClick={() => addMemberToAcademicTeam(user.id)}
+                                disabled={loading}
+                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                              >
+                                Add
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
