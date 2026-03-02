@@ -35,7 +35,20 @@ class PointTypeEnum(TypeDecorator):
         if value is None:
             return None
         if isinstance(value, PointType):
-            return value.value
+            return value.value  # Return the string value, not the enum name
+        if isinstance(value, str):
+            # If it's already a string value (like 'help_provided'), return as-is
+            # If it's the enum name (like 'HELP_PROVIDED'), convert to value
+            try:
+                # Try to get enum by value first
+                PointType(value)
+                return value  # It's already a valid value
+            except ValueError:
+                # If not a value, try as enum name
+                try:
+                    return PointType[value].value
+                except (KeyError, AttributeError):
+                    return value
         return value
     
     def process_result_value(self, value, dialect):

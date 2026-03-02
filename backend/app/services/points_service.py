@@ -65,11 +65,12 @@ def award_points(
         raise ValueError(f"User not found: {user_id}")
     
     # Create points history entry
-    # For str enums, SQLAlchemy should use the value automatically, but ensure it's the enum instance
+    # Explicitly convert enum to its value to ensure database gets the correct string value
+    point_type_value = point_type.value if isinstance(point_type, PointType) else point_type
     points_entry = PointsHistory(
         user_id=user_id,
         points=point_value,
-        point_type=point_type,  # SQLAlchemy will convert str enum to its value
+        point_type=point_type_value,  # Use the enum value string, not the enum name
         description=description,
         related_user_id=related_user_id,
         related_entity_id=related_entity_id,
