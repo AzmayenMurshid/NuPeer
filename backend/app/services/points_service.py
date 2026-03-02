@@ -81,8 +81,9 @@ def award_points(
     db.add(points_entry)
     db.flush()  # Flush to get the points_entry.id
     
-    # Handle tagged members - award team points
-    if tagged_member_ids:
+    # Handle tagged members - award team points ONLY if tagged members exist
+    # Team points can only be added if a user from the team is tagged
+    if tagged_member_ids and len(tagged_member_ids) > 0:
         # Get the user's team
         user_team_member = db.query(BattleBuddyMember).filter(
             BattleBuddyMember.user_id == user_id
@@ -100,16 +101,18 @@ def award_points(
                     BattleBuddyMember.team_id == user_team.id
                 ).all()
                 
-                # Create tagged member entries and award team points
-                for tagged_member in valid_tagged_members:
-                    tagged_entry = TaggedMember(
-                        points_history_id=points_entry.id,
-                        user_id=tagged_member.user_id
-                    )
-                    db.add(tagged_entry)
-                
-                # Award team points (same amount as individual points)
+                # Only award team points if there are valid tagged members from the same team
                 if valid_tagged_members:
+                    # Create tagged member entries
+                    for tagged_member in valid_tagged_members:
+                        tagged_entry = TaggedMember(
+                            points_history_id=points_entry.id,
+                            user_id=tagged_member.user_id
+                        )
+                        db.add(tagged_entry)
+                    
+                    # Award team points (same amount as individual points)
+                    # This is the ONLY way team points can be added - when team members are tagged
                     user_team.points = (user_team.points or 0) + point_value
     
     db.commit()

@@ -56,12 +56,6 @@ class AddMemberRequest(BaseModel):
     user_id: str
 
 
-class UpdateTeamPointsRequest(BaseModel):
-    team_id: str
-    points: int
-    description: Optional[str] = "Admin adjustment"
-
-
 class JoinTeamRequest(BaseModel):
     team_id: str
 
@@ -298,46 +292,6 @@ async def remove_member_from_team(
     return {
         "success": True,
         "message": f"Removed {user.first_name if user else 'User'} {user.last_name if user else ''} from team {team.team_name if team else 'Unknown'}"
-    }
-
-
-@router.post("/teams/points", status_code=status.HTTP_200_OK)
-async def update_team_points(
-    request: UpdateTeamPointsRequest,
-    admin_user: User = Depends(get_admin_user),
-    db: Session = Depends(get_db)
-):
-    """Update team points (add or remove)"""
-    try:
-        team_id = uuid.UUID(request.team_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid team_id format"
-        )
-    
-    team = db.query(BattleBuddyTeam).filter(BattleBuddyTeam.id == team_id).first()
-    if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found"
-        )
-    
-    current_points = team.points or 0
-    new_total = current_points + request.points
-    
-    team.points = new_total
-    db.commit()
-    db.refresh(team)
-    
-    return {
-        "success": True,
-        "team_id": str(team.id),
-        "team_name": team.team_name,
-        "previous_points": current_points,
-        "points_added": request.points,
-        "new_total": new_total,
-        "description": request.description
     }
 
 
