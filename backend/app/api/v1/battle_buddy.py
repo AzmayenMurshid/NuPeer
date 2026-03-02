@@ -557,10 +557,11 @@ async def update_team_points_with_tags(
     
     # Award points with tagged members - this will also award team points
     try:
+        # Use HELP_PROVIDED as point type for team point adjustments (DAILY_LOGIN may not exist in DB enum)
         points_entry = award_points(
             db=db,
             user_id=target_user_id,
-            point_type=PointType.DAILY_LOGIN,  # Using as placeholder for admin adjustments
+            point_type=PointType.HELP_PROVIDED,  # Using HELP_PROVIDED for team point adjustments
             description=request.description,
             points=request.points,
             tagged_member_ids=tagged_user_ids
