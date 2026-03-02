@@ -414,8 +414,15 @@ async def get_my_team(
     )
 
 
-class JoinTeamRequest(BaseModel):
-    team_id: str
+class TeamMemberAutocompleteResponse(BaseModel):
+    """Response model for team member autocomplete"""
+    user_id: str
+    first_name: str
+    last_name: str
+    email: str
+    
+    class Config:
+        from_attributes = True
 
 
 @router.get("/team-members/autocomplete", response_model=List[TeamMemberAutocompleteResponse])
