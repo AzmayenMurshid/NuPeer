@@ -418,6 +418,60 @@ class JoinTeamRequest(BaseModel):
     team_id: str
 
 
+@router.get("/team-members/autocomplete", response_model=List[TeamMemberAutocompleteResponse])
+async def get_team_members_autocomplete(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    query: Optional[str] = None
+):
+    """Get team members for @mention autocomplete - returns members of user's team"""
+    # Get user's team
+    user_team_member = db.query(BattleBuddyMember).filter(
+        BattleBuddyMember.user_id == current_user.id
+    ).first()
+    
+    if not user_team_member:
+        return []
+    
+    # Get all members of the same team
+    team_members = (
+        db.query(BattleBuddyMember)
+        .join(User, BattleBuddyMember.user_id == User.id)
+        .filter(BattleBuddyMember.team_id == user_team_member.team_id)
+        .options(joinedload(BattleBuddyMember.user))
+        .all()
+    )
+    
+    # Filter by query if provided
+    results = []
+    for member in team_members:
+        if member.user:
+            # Skip the current user
+            if member.user_id == current_user.id:
+                continue
+            
+            # Filter by query (name or email)
+            if query:
+                query_lower = query.lower()
+                name_match = (
+                    query_lower in member.user.first_name.lower() or
+                    query_lower in member.user.last_name.lower() or
+                    query_lower in f"{member.user.first_name} {member.user.last_name}".lower() or
+                    query_lower in member.user.email.lower()
+                )
+                if not name_match:
+                    continue
+            
+            results.append(TeamMemberAutocompleteResponse(
+                user_id=str(member.user_id),
+                first_name=member.user.first_name,
+                last_name=member.user.last_name,
+                email=member.user.email
+            ))
+    
+    return results
+
+
 @router.post("/join-team", status_code=status.HTTP_201_CREATED)
 async def join_team(
     request: JoinTeamRequest,
