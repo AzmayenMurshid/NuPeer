@@ -1,7 +1,7 @@
 """
 Points System Models
 """
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Enum as SQLEnum
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Enum as SQLEnum, TypeDecorator
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -25,6 +25,31 @@ class PointType(str, enum.Enum):
     DAILY_LOGIN = "daily_login"  # Daily login bonus
 
 
+class PointTypeEnum(TypeDecorator):
+    """TypeDecorator to ensure enum values (not names) are stored in database"""
+    impl = SQLEnum(PointType, name='pointtype', native_enum=True)
+    cache_ok = True
+    
+    def process_bind_param(self, value, dialect):
+        """Convert enum to its value for database storage"""
+        if value is None:
+            return None
+        if isinstance(value, PointType):
+            return value.value
+        return value
+    
+    def process_result_value(self, value, dialect):
+        """Convert database value back to enum"""
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                return PointType(value)
+            except ValueError:
+                return value
+        return value
+
+
 class PointsHistory(Base):
     """Track all point transactions"""
     __tablename__ = "points_history"
@@ -32,7 +57,7 @@ class PointsHistory(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     points = Column(Integer, nullable=False)  # Can be positive (earned) or negative (spent)
-    point_type = Column(SQLEnum(PointType), nullable=False, index=True)
+    point_type = Column(PointTypeEnum(), nullable=False, index=True)
     description = Column(Text, nullable=True)  # Human-readable description
     related_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # User who helped/was helped
     related_entity_id = Column(UUID(as_uuid=True), nullable=True)  # ID of related entity (help_request, mentorship_request, etc.)
