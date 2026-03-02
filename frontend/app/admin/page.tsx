@@ -67,6 +67,11 @@ export default function AdminPage() {
   const [teamPointsDescription, setTeamPointsDescription] = useState('')
   const [memberSearchQuery, setMemberSearchQuery] = useState('')
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([])
+  const [taggedMembers, setTaggedMembers] = useState<User[]>([]) // Track tagged team members
+  const [mentionQuery, setMentionQuery] = useState('') // For @mention autocomplete
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false)
+  const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([])
+  const [mentionPosition, setMentionPosition] = useState(0) // Cursor position for mentions
   
   // Academic Teams state
   const [academicTeams, setAcademicTeams] = useState<any[]>([])
@@ -84,6 +89,16 @@ export default function AdminPage() {
       setIsPasswordVerified(true)
     }
   }, [])
+
+  // Reset tagged members when team selection changes
+  useEffect(() => {
+    if (selectedTeam) {
+      setTaggedMembers([])
+      setTeamPointsDescription('')
+      setTeamPointsToAdd('')
+      setShowMentionSuggestions(false)
+    }
+  }, [selectedTeam?.id])
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -314,12 +329,123 @@ export default function AdminPage() {
     }
   }
 
+  // Fetch team members for autocomplete
+  const fetchTeamMemberSuggestions = async (query: string) => {
+    if (!selectedTeam || !query) {
+      setMentionSuggestions([])
+      return
+    }
+    
+    try {
+      const response = await api.get('/battle-buddy/team-members/autocomplete', {
+        params: { query }
+      })
+      setMentionSuggestions(response.data)
+    } catch (error) {
+      console.error('Failed to fetch team member suggestions:', error)
+      setMentionSuggestions([])
+    }
+  }
+
+  // Handle description input with @mention support
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setTeamPointsDescription(value)
+    
+    // Check for @mention
+    const cursorPos = e.target.selectionStart || 0
+    const textBeforeCursor = value.substring(0, cursorPos)
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@')
+    
+    if (lastAtIndex !== -1) {
+      const mentionQuery = textBeforeCursor.substring(lastAtIndex + 1)
+      // Check if we're still typing the mention (no space after @)
+      if (!mentionQuery.includes(' ') && !mentionQuery.includes('\n')) {
+        setMentionQuery(mentionQuery)
+        setMentionPosition(lastAtIndex)
+        setShowMentionSuggestions(true)
+        fetchTeamMemberSuggestions(mentionQuery)
+        return
+      }
+    }
+    
+    setShowMentionSuggestions(false)
+    
+    // Parse existing @mentions from description
+    parseMentionsFromDescription(value)
+  }
+
+  // Parse @mentions from description and extract user IDs
+  const parseMentionsFromDescription = (description: string) => {
+    // Match @FirstName LastName or @email patterns
+    const mentionPattern = /@(\w+\s+\w+|\w+@[\w.]+)/g
+    const matches = description.match(mentionPattern) || []
+    
+    // Extract tagged members from selectedTeam.members
+    const tagged: User[] = []
+    if (selectedTeam?.members) {
+      matches.forEach(match => {
+        const nameOrEmail = match.substring(1) // Remove @
+        const member = selectedTeam.members.find((m: any) => {
+          const fullName = `${m.first_name} ${m.last_name}`
+          return fullName.toLowerCase().includes(nameOrEmail.toLowerCase()) ||
+                 m.email.toLowerCase().includes(nameOrEmail.toLowerCase())
+        })
+        if (member && !tagged.find(t => t.id === member.user_id)) {
+          tagged.push({
+            id: member.user_id,
+            email: member.email,
+            first_name: member.first_name,
+            last_name: member.last_name,
+            points: 0
+          })
+        }
+      })
+    }
+    
+    setTaggedMembers(tagged)
+  }
+
+  // Insert mention into description
+  const insertMention = (member: any) => {
+    const beforeMention = teamPointsDescription.substring(0, mentionPosition)
+    const afterMention = teamPointsDescription.substring(mentionPosition + mentionQuery.length + 1)
+    const newDescription = `${beforeMention}@${member.first_name} ${member.last_name} ${afterMention}`
+    setTeamPointsDescription(newDescription)
+    setShowMentionSuggestions(false)
+    setMentionQuery('')
+    
+    // Update tagged members
+    const updatedTagged = [...taggedMembers]
+    if (!updatedTagged.find(t => t.id === member.user_id)) {
+      updatedTagged.push({
+        id: member.user_id,
+        email: member.email,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        points: 0
+      })
+      setTaggedMembers(updatedTagged)
+    }
+  }
+
   const updateTeamPoints = async () => {
     if (!selectedTeam) return
+    
+    // Validate tagged members are required
+    if (taggedMembers.length === 0) {
+      setMessage({ type: 'error', text: 'Please tag at least one team member using @mention in the description' })
+      return
+    }
     
     const points = parseInt(teamPointsToAdd)
     if (isNaN(points) || points === 0) {
       setMessage({ type: 'error', text: 'Please enter a valid number of points' })
+      return
+    }
+
+    if (!teamPointsDescription.trim()) {
+      setMessage({ type: 'error', text: 'Description is required and must include @mentions' })
       return
     }
 
@@ -328,7 +454,8 @@ export default function AdminPage() {
       const response = await api.post('/admin/battle-buddy/teams/points', {
         team_id: selectedTeam.id,
         points: points,
-        description: teamPointsDescription || `Admin adjustment by ${user?.email}`
+        description: teamPointsDescription,
+        tagged_member_ids: taggedMembers.map(m => m.id)
       })
       
       setMessage({ 
@@ -338,6 +465,7 @@ export default function AdminPage() {
       
       setTeamPointsToAdd('')
       setTeamPointsDescription('')
+      setTaggedMembers([])
       loadTeams()
       // Update selected team
       const updatedTeams = await api.get('/admin/battle-buddy/teams')
@@ -804,6 +932,8 @@ export default function AdminPage() {
                       setTeamPointsToAdd('')
                       setTeamPointsDescription('')
                       setMemberSearchQuery('')
+                      setTaggedMembers([])
+                      setShowMentionSuggestions(false)
                       setMemberSearchResults([])
                     }}
                     className={`p-4 rounded-lg transition-colors cursor-pointer ${
@@ -943,53 +1073,147 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                {/* Update Team Points */}
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Team Points: <span className="font-semibold text-blue-600 dark:text-blue-400">{selectedTeam.points}</span>
-                  </h4>
-                  <div className="flex gap-2 mb-2">
+                {/* Update Team Points - Only shown when team members are tagged */}
+                {taggedMembers.length > 0 ? (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Team Points: <span className="font-semibold text-blue-600 dark:text-blue-400">{selectedTeam.points}</span>
+                    </h4>
+                    
+                    {/* Tagged Members Display */}
+                    <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Tagged Members:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {taggedMembers.map((member) => (
+                          <span
+                            key={member.id}
+                            className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded text-xs flex items-center gap-1"
+                          >
+                            {member.first_name} {member.last_name}
+                            <button
+                              onClick={() => {
+                                const updated = taggedMembers.filter(m => m.id !== member.id)
+                                setTaggedMembers(updated)
+                                // Remove mention from description
+                                const mentionText = `@${member.first_name} ${member.last_name}`
+                                setTeamPointsDescription(teamPointsDescription.replace(mentionText, '').trim())
+                              }}
+                              className="text-blue-500 hover:text-blue-700"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        onClick={() => {
+                          const current = parseInt(teamPointsToAdd) || 0
+                          setTeamPointsToAdd(String(current - 10))
+                        }}
+                        className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <input
+                        type="number"
+                        value={teamPointsToAdd}
+                        onChange={(e) => setTeamPointsToAdd(e.target.value)}
+                        placeholder="Enter points (negative to remove)"
+                        className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                      <button
+                        onClick={() => {
+                          const current = parseInt(teamPointsToAdd) || 0
+                          setTeamPointsToAdd(String(current + 10))
+                        }}
+                        className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={teamPointsDescription}
+                        onChange={handleDescriptionChange}
+                        placeholder="Description (use @ to mention team members)"
+                        className="w-full mb-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                      {/* Mention Autocomplete Dropdown */}
+                      {showMentionSuggestions && mentionSuggestions.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {mentionSuggestions.map((member) => (
+                            <button
+                              key={member.user_id}
+                              onClick={() => insertMention(member)}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {member.first_name} {member.last_name}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">{member.email}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
-                      onClick={() => {
-                        const current = parseInt(teamPointsToAdd) || 0
-                        setTeamPointsToAdd(String(current - 10))
-                      }}
-                      className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                      onClick={updateTeamPoints}
+                      disabled={loading || !teamPointsToAdd || parseInt(teamPointsToAdd) === 0 || !teamPointsDescription.trim()}
+                      className="w-full px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <input
-                      type="number"
-                      value={teamPointsToAdd}
-                      onChange={(e) => setTeamPointsToAdd(e.target.value)}
-                      placeholder="Enter points (negative to remove)"
-                      className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                    <button
-                      onClick={() => {
-                        const current = parseInt(teamPointsToAdd) || 0
-                        setTeamPointsToAdd(String(current + 10))
-                      }}
-                      className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
-                    >
-                      <Plus className="w-4 h-4" />
+                      {loading ? 'Updating...' : 'Update Team Points'}
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    value={teamPointsDescription}
-                    onChange={(e) => setTeamPointsDescription(e.target.value)}
-                    placeholder="Description (optional)"
-                    className="w-full mb-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                  <button
-                    onClick={updateTeamPoints}
-                    disabled={loading || !teamPointsToAdd || parseInt(teamPointsToAdd) === 0}
-                    className="w-full px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Updating...' : 'Update Team Points'}
-                  </button>
-                </div>
+                ) : (
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+                          Tag Team Members Required
+                        </p>
+                        <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                          To update team points, you must tag at least one team member in the description using @mention.
+                          Start typing @ in the description field below to tag team members.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 relative">
+                      <input
+                        type="text"
+                        value={teamPointsDescription}
+                        onChange={handleDescriptionChange}
+                        placeholder="Type @ to mention team members (required)"
+                        className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-yellow-300 dark:border-yellow-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                      {/* Mention Autocomplete Dropdown */}
+                      {showMentionSuggestions && mentionSuggestions.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {mentionSuggestions.map((member) => (
+                            <button
+                              key={member.user_id}
+                              onClick={() => insertMention(member)}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {member.first_name} {member.last_name}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">{member.email}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -11,6 +11,8 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_user
 from app.models.user import User
 from app.models.battle_buddy import BattleBuddyTeam, BattleBuddyMember
+from app.models.points import PointType
+from app.services.points_service import award_points
 
 router = APIRouter()
 
@@ -58,6 +60,13 @@ class AddMemberRequest(BaseModel):
 
 class JoinTeamRequest(BaseModel):
     team_id: str
+
+
+class UpdateTeamPointsWithTagsRequest(BaseModel):
+    team_id: str
+    points: int
+    description: str
+    tagged_member_ids: List[str]  # Required list of user IDs to tag
 
 
 @router.get("/teams", response_model=List[BattleBuddyTeamResponse])
@@ -494,3 +503,83 @@ async def join_team(
         "member_id": str(member.id),
         "team_name": team.team_name
     }
+
+
+@router.post("/teams/points", status_code=status.HTTP_200_OK)
+async def update_team_points_with_tags(
+    request: UpdateTeamPointsWithTagsRequest,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update team points - REQUIRES tagged members.
+    Team points can only be added when team members are tagged.
+    """
+    # Validate that tagged members are provided
+    if not request.tagged_member_ids or len(request.tagged_member_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one team member must be tagged to award team points"
+        )
+    
+    try:
+        team_id = uuid.UUID(request.team_id)
+        tagged_user_ids = [uuid.UUID(uid) for uid in request.tagged_member_ids]
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid team_id or tagged_member_ids format"
+        )
+    
+    # Check if team exists
+    team = db.query(BattleBuddyTeam).filter(BattleBuddyTeam.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Verify that all tagged members belong to this team
+    team_members = db.query(BattleBuddyMember).filter(
+        BattleBuddyMember.team_id == team_id,
+        BattleBuddyMember.user_id.in_(tagged_user_ids)
+    ).all()
+    
+    if len(team_members) != len(tagged_user_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All tagged members must belong to the specified team"
+        )
+    
+    # Get a team member to award points to (we'll use the first tagged member)
+    # The award_points function will handle team points when tagged_member_ids are provided
+    target_user_id = tagged_user_ids[0]
+    
+    # Award points with tagged members - this will also award team points
+    try:
+        points_entry = award_points(
+            db=db,
+            user_id=target_user_id,
+            point_type=PointType.DAILY_LOGIN,  # Using as placeholder for admin adjustments
+            description=request.description,
+            points=request.points,
+            tagged_member_ids=tagged_user_ids
+        )
+        
+        # Refresh team to get updated points
+        db.refresh(team)
+        
+        return {
+            "success": True,
+            "team_id": str(team.id),
+            "team_name": team.team_name,
+            "points_added": request.points,
+            "new_total": team.points or 0,
+            "description": request.description,
+            "tagged_members": len(tagged_user_ids)
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
