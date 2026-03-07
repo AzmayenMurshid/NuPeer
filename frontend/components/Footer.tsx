@@ -52,14 +52,6 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
-                    href="/calendar"
-                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
-                  >
-                    Calendar
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href="/help"
                     className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
                   >

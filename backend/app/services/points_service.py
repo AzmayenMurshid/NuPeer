@@ -20,8 +20,6 @@ POINT_VALUES = {
     PointType.PROFILE_COMPLETED: 50,
     PointType.RESUME_UPLOADED: 25,
     PointType.EXPERIENCE_ADDED: 10,
-    PointType.CALENDAR_EVENT_CREATED: 15,
-    PointType.CALENDAR_EVENT_JOINED: 5,
     PointType.DAILY_LOGIN: 5,
 }
 

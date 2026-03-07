@@ -89,21 +89,6 @@ Base URL: `http://localhost:8000` (local) or `https://nupeer-production.up.railw
 
 ---
 
-## 📅 Calendar (`/api/v1/calendar`)
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/v1/calendar` | Create calendar event | ✅ |
-| GET | `/api/v1/calendar` | Get all calendar events | ✅ |
-| GET | `/api/v1/calendar/{event_id}` | Get specific event | ✅ |
-| PUT | `/api/v1/calendar/{event_id}` | Update event | ✅ |
-| DELETE | `/api/v1/calendar/{event_id}` | Delete event | ✅ |
-| POST | `/api/v1/calendar/{event_id}/participants` | Add participant to event | ✅ |
-| DELETE | `/api/v1/calendar/{event_id}/participants/{participant_id}` | Remove participant | ✅ |
-| GET | `/api/v1/calendar/invite-suggestions/tutors` | Get tutor invite suggestions | ✅ |
-| GET | `/api/v1/calendar/invite-suggestions/brothers-major` | Get major-based invite suggestions | ✅ |
-| GET | `/api/v1/calendar/invite-suggestions/study-group` | Get study group invite suggestions | ✅ |
-
 ---
 
 ## 👥 Mentorship (`/api/v1/mentorship`)

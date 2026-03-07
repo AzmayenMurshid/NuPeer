@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useEffect, useCallback, memo } from 'react'
-import { Users, Mail, Phone, BookOpen, Calendar } from 'lucide-react'
+import { Users, Mail, Phone, BookOpen } from 'lucide-react'
 import { GroupStudyBrother } from '@/lib/hooks/useHelpRequests'
 import { useRouter } from 'next/navigation'
 
@@ -23,9 +23,6 @@ export function GroupStudyRecommendations({
   const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   
-  const handleInviteToEvent = (userId: string) => {
-    router.push(`/calendar?invite=${userId}`)
-  }
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const isDragging = useRef(false)
@@ -326,13 +323,6 @@ export function GroupStudyRecommendations({
                   </div>
                   
                   <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                    <button
-                      onClick={() => handleInviteToEvent(brother.helper_id)}
-                      className="w-full flex items-center justify-center gap-2 px-2 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      Invite to Event
-                    </button>
                     {(brother.helper_email || brother.helper_phone_number) && (
                       <div className="flex flex-wrap gap-3">
                         {brother.helper_email && (

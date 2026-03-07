@@ -29,8 +29,6 @@ def upgrade() -> None:
                 'profile_completed',
                 'resume_uploaded',
                 'experience_added',
-                'calendar_event_created',
-                'calendar_event_joined',
                 'daily_login'
             );
         EXCEPTION
@@ -46,8 +44,7 @@ def upgrade() -> None:
     pointtype_enum = postgresql.ENUM(
         'help_provided', 'mentorship_accepted', 'mentorship_completed', 
         'study_group_created', 'study_group_joined', 'profile_completed',
-        'resume_uploaded', 'experience_added', 'calendar_event_created',
-        'calendar_event_joined', 'daily_login',
+        'resume_uploaded', 'experience_added', 'daily_login',
         name='pointtype',
         create_type=False  # Use existing enum
     )

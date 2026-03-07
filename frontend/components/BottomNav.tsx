@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, BarChart3, Upload, HelpCircle, User, Calendar } from 'lucide-react'
+import { Home, BarChart3, Upload, HelpCircle, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function BottomNav() {
@@ -21,11 +21,6 @@ export function BottomNav() {
       href: '/dashboard',
       icon: Home,
       label: 'Home',
-    },
-    {
-      href: '/calendar',
-      icon: Calendar,
-      label: 'Calendar',
     },
     {
       href: '/upload',

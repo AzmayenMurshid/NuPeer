@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, Calendar, Users, Trophy } from 'lucide-react'
+import { ArrowRight, Users, Trophy } from 'lucide-react'
 
 export function QuickActions() {
   return (
@@ -19,22 +19,6 @@ export function QuickActions() {
           </div>
           <div className="w-12 h-12 rounded-full bg-primary-500/10 dark:bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/20 dark:group-hover:bg-primary-500/30 transition-colors">
             <ArrowRight className="w-6 h-6 text-primary-500" />
-          </div>
-        </div>
-      </Link>
-      <Link 
-        href="/calendar" 
-        className="card card-hover p-6 group"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">View Calendar</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Schedule study sessions
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-full bg-primary-500/10 dark:bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/20 dark:group-hover:bg-primary-500/30 transition-colors">
-            <Calendar className="w-6 h-6 text-primary-500" />
           </div>
         </div>
       </Link>

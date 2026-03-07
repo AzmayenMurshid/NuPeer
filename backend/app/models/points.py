@@ -20,8 +20,6 @@ class PointType(str, enum.Enum):
     PROFILE_COMPLETED = "profile_completed"  # Completing profile
     RESUME_UPLOADED = "resume_uploaded"  # Uploading resume
     EXPERIENCE_ADDED = "experience_added"  # Adding experience
-    CALENDAR_EVENT_CREATED = "calendar_event_created"  # Creating calendar event
-    CALENDAR_EVENT_JOINED = "calendar_event_joined"  # Joining calendar event
     DAILY_LOGIN = "daily_login"  # Daily login bonus
 
 

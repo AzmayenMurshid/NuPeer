@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Upload, Calendar, HelpCircle, Users, Trophy } from 'lucide-react'
+import { Upload, HelpCircle, Users, Trophy } from 'lucide-react'
 
 export function DashboardNavBar() {
   const pathname = usePathname()
@@ -12,11 +12,6 @@ export function DashboardNavBar() {
       href: '/upload',
       icon: Upload,
       label: 'Upload Transcript',
-    },
-    {
-      href: '/calendar',
-      icon: Calendar,
-      label: 'View Calendar',
     },
     {
       href: '/help',

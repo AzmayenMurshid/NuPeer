@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Edit, Trash2, Mail, Phone, X, User, Calendar } from 'lucide-react'
+import { Edit, Trash2, Mail, Phone, X, User } from 'lucide-react'
 import { StudyTechniques } from '@/components/help/StudyTechniques'
 
 
@@ -24,9 +24,6 @@ function HelpPageContent() {
   const [selectedRecommendationContact, setSelectedRecommendationContact] = useState<{helper_id: string, course_code: string, helper_email: string | null, helper_phone_number: string | null} | null>(null)
   const [windowWidth, setWindowWidth] = useState<number>(0)
   
-  const handleInviteToEvent = (userId: string) => {
-    router.push(`/calendar?invite=${userId}`)
-  }
 
   // Track window width for responsive popup
   useEffect(() => {
@@ -246,13 +243,6 @@ function HelpPageContent() {
                     {rec.semester && rec.year && (
                       <span className="text-xs text-gray-500 dark:text-gray-400">{rec.semester} {rec.year}</span>
                     )}
-                    <button
-                      onClick={() => handleInviteToEvent(rec.helper_id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      Invite to Event
-                    </button>
                     {(rec.helper_email || rec.helper_phone_number) && (
                             <button
                               onClick={() => toggleContact(`rec-${rec.helper_id}`)}
@@ -415,13 +405,6 @@ function HelpPageContent() {
                   </div>
                   
                   <div className="space-y-2">
-                    <button
-                      onClick={() => handleInviteToEvent(tutor.helper_id)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-500 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors font-medium text-sm"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Invite to Event
-                    </button>
                     {(tutor.helper_email || tutor.helper_phone_number) && (
                       <button
                         onClick={() => setSelectedTutorContact({

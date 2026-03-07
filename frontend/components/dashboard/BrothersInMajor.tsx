@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Users, Mail, Phone, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Users, Mail, Phone, ChevronLeft, ChevronRight } from 'lucide-react'
 import { MajorMatchBrother } from '@/lib/hooks/useHelpRequests'
 import { useThrottle } from '@/lib/hooks/useThrottle'
 import { useRouter } from 'next/navigation'
@@ -19,9 +19,6 @@ export function BrothersInMajor({ major, brothers, isLoading, error }: BrothersI
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   
-  const handleInviteToEvent = (userId: string) => {
-    router.push(`/calendar?invite=${userId}`)
-  }
 
   const checkScrollability = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -142,13 +139,6 @@ export function BrothersInMajor({ major, brothers, isLoading, error }: BrothersI
               </div>
 
               <div className="pt-3 space-y-2">
-                <button
-                  onClick={() => handleInviteToEvent(brother.helper_id)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Invite to Event
-                </button>
                 {(brother.helper_email || brother.helper_phone_number) && (
                   <div className="divider space-y-2">
                     {brother.helper_email && (
