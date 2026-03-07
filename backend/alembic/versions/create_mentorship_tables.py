@@ -1,7 +1,7 @@
 """create mentorship tables
 
 Revision ID: create_mentorship_tables
-Revises: make_transcript_id_nullable
+Revises: create_calendar_events
 Create Date: 2024-01-01 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'create_mentorship_tables'
-down_revision = 'make_transcript_id_nullable'
+down_revision = 'create_calendar_events'
 branch_labels = None
 depends_on = None
 
