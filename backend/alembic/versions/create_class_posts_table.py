@@ -1,7 +1,7 @@
 """create class posts table
 
 Revision ID: create_class_posts_table
-Revises: create_mentorship_tables
+Revises: add_daily_login_enum
 Create Date: 2024-01-01 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'create_class_posts_table'
-down_revision = 'create_mentorship_tables'
+down_revision = 'add_daily_login_enum'
 branch_labels = None
 depends_on = None
 
