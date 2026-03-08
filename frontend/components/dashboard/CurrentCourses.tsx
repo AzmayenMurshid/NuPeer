@@ -10,7 +10,7 @@ interface CurrentCoursesProps {
 
 export function CurrentCourses({ courses }: CurrentCoursesProps) {
   return (
-    <div className="card p-6 mb-8">
+    <>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Current Courses</h2>
@@ -66,7 +66,7 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
           ))}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
