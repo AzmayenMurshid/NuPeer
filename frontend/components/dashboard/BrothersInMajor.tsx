@@ -70,9 +70,6 @@ export function BrothersInMajor({ major, brothers, isLoading, error }: BrothersI
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Brothers in Your Major</h2>
         <span className="text-sm font-semibold text-primary-500">ΣΝ</span>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Connect with brothers who share your major: <span className="font-semibold text-primary-500">{major}</span>
-      </p>
       {brothers && Array.isArray(brothers) && brothers.length > 0 ? (
         <div className="relative">
           {/* Navigation Buttons */}

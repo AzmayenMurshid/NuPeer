@@ -18,7 +18,7 @@ interface CourseDistributionChartProps {
 
 export function CourseDistributionChart({ data, hasNoData }: CourseDistributionChartProps) {
   return (
-    <div className="card p-6">
+    <>
       <h3 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">Courses by Department</h3>
       {hasNoData || !data || data.length === 0 ? (
         <div className="text-center py-12">
@@ -54,7 +54,7 @@ export function CourseDistributionChart({ data, hasNoData }: CourseDistributionC
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 

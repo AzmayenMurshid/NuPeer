@@ -18,7 +18,7 @@ interface GradeDistributionBarChartProps {
 
 export function GradeDistributionBarChart({ data, hasNoData }: GradeDistributionBarChartProps) {
   return (
-    <div className="card p-6">
+    <>
       <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Grade Distribution</h3>
       {hasNoData || data.length === 0 ? (
         <div className="text-center py-12">
@@ -52,7 +52,7 @@ export function GradeDistributionBarChart({ data, hasNoData }: GradeDistribution
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 

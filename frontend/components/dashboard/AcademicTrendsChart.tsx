@@ -25,7 +25,7 @@ export function AcademicTrendsChart({ data, hasNoData }: AcademicTrendsChartProp
   const [graphView, setGraphView] = useState<GraphView>('all')
 
   return (
-    <div className="card p-6 mb-8">
+    <>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Academic Trends</h3>
         <div className="flex items-center gap-responsive-sm flex-wrap">
@@ -177,7 +177,7 @@ export function AcademicTrendsChart({ data, hasNoData }: AcademicTrendsChartProp
           </LineChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 

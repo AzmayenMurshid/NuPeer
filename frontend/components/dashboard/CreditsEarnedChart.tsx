@@ -20,7 +20,7 @@ interface CreditsEarnedChartProps {
 
 export function CreditsEarnedChart({ data, hasNoData }: CreditsEarnedChartProps) {
   return (
-    <div className="card p-6">
+    <>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Credits Earned</h3>
         <Link
@@ -70,7 +70,7 @@ export function CreditsEarnedChart({ data, hasNoData }: CreditsEarnedChartProps)
           </BarChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 

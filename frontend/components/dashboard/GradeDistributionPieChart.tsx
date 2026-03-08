@@ -18,7 +18,7 @@ interface GradeDistributionPieChartProps {
 
 export function GradeDistributionPieChart({ data, hasNoData }: GradeDistributionPieChartProps) {
   return (
-    <div className="card p-6 mb-8">
+    <>
       <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Grade Distribution</h3>
       {hasNoData || data.length === 0 ? (
         <div className="text-center py-12">
@@ -54,7 +54,7 @@ export function GradeDistributionPieChart({ data, hasNoData }: GradeDistribution
           </PieChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 

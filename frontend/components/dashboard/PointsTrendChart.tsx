@@ -20,7 +20,7 @@ interface PointsTrendChartProps {
 
 export function PointsTrendChart({ data, hasNoData }: PointsTrendChartProps) {
   return (
-    <div className="card p-6">
+    <>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Points Trend</h3>
         <Link
@@ -110,7 +110,7 @@ export function PointsTrendChart({ data, hasNoData }: PointsTrendChartProps) {
           </LineChart>
         </ResponsiveContainer>
       )}
-    </div>
+    </>
   )
 }
 
