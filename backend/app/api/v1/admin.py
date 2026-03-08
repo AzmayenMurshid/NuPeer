@@ -109,27 +109,31 @@ async def update_user_points(
                 detail=f"Invalid point type: {request.point_type}"
             )
     
-    # Calculate the difference
+    # Get current points before update
     current_points = target_user.points or 0
-    new_total = current_points + request.points
     
-    # Create points history entry
-    points_entry = PointsHistory(
-        user_id=user_id,
-        points=request.points,
-        point_type=point_type,
-        description=request.description or f"Admin adjustment by {admin_user.email}",
-        related_user_id=admin_user.id,
-        related_entity_type="admin_adjustment"
-    )
+    # Use award_points service function for proper point incrementation
+    # Pass points=None to use custom point value, and no tagged_member_ids to avoid team point logic
+    try:
+        points_entry = award_points(
+            db=db,
+            user_id=user_id,
+            point_type=point_type,
+            description=request.description or f"Admin adjustment by {admin_user.email}",
+            related_user_id=admin_user.id,
+            related_entity_type="admin_adjustment",
+            points=request.points,  # Custom point value
+            tagged_member_ids=None  # No tagged members for admin adjustments
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     
-    # Update user's total points
-    target_user.points = new_total
-    
-    db.add(points_entry)
-    db.commit()
-    db.refresh(points_entry)
+    # Refresh to get updated points
     db.refresh(target_user)
+    new_total = target_user.points or 0
     
     return {
         "success": True,
