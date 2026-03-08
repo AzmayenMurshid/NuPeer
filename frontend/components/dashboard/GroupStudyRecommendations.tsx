@@ -214,14 +214,14 @@ export function GroupStudyRecommendations({
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Find brothers who are taking the same courses as you
         </p>
-        <div className="text-center py-8">
+        <>
           <p className="text-gray-600 dark:text-gray-400 mb-2">
             No study groups found
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
             Add current courses to find study partners
           </p>
-        </div>
+        </>
       </div>
     )
   }

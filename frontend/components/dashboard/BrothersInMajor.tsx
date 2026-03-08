@@ -182,11 +182,9 @@ export function BrothersInMajor({ major, brothers, isLoading, error }: BrothersI
           </p>
         </div>
       ) : (
-        <div className="card p-6 text-center">
-          <p className="text-gray-600 dark:text-gray-400">
-            No other brothers found with the major <span className="font-semibold text-primary-500">{major}</span>
-          </p>
-        </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          No other brothers found with the major <span className="font-semibold text-primary-500">{major}</span>
+        </p>
       )}
     </div>
   )

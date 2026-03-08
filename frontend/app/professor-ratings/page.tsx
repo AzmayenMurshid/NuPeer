@@ -36,14 +36,44 @@ function ProfessorRatingsContent() {
     course_name: '',
     class_format: 'in_person',
     professor_name: '',
-    professor_rating: 5,
+    professor_rating: 0,
     exam_format: 'in_person',
     lockdown_browser_required: null as boolean | null,
     description: '',
   })
   
+  const [lastClickedStar, setLastClickedStar] = useState<number | null>(null)
+  
+  const handleStarClick = (starIndex: number) => {
+    // starIndex is 0-4 (for 5 stars)
+    const halfRating = starIndex + 0.5 // First click = half star
+    const fullRating = starIndex + 1    // Second click = full star
+    
+    // If clicking the same star that was last clicked, toggle between half and full
+    if (lastClickedStar === starIndex) {
+      if (formData.professor_rating === halfRating) {
+        // Currently at half, make it full
+        setFormData({ ...formData, professor_rating: fullRating })
+      } else if (formData.professor_rating === fullRating) {
+        // Currently at full, make it half (or could go to 0, but let's keep it at half)
+        setFormData({ ...formData, professor_rating: halfRating })
+      } else {
+        // Different rating, set to half
+        setFormData({ ...formData, professor_rating: halfRating })
+      }
+    } else {
+      // Clicking a different star, set to half star
+      setFormData({ ...formData, professor_rating: halfRating })
+      setLastClickedStar(starIndex)
+    }
+  }
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (formData.professor_rating === 0) {
+      alert('Please select a rating by clicking on the stars')
+      return
+    }
     try {
       await createPostMutation.mutateAsync(formData)
       setShowCreateForm(false)
@@ -52,11 +82,12 @@ function ProfessorRatingsContent() {
         course_name: '',
         class_format: 'in_person',
         professor_name: '',
-        professor_rating: 5,
+        professor_rating: 0,
         exam_format: 'in_person',
         lockdown_browser_required: null,
         description: '',
       })
+      setLastClickedStar(null)
     } catch (error) {
       console.error('Failed to create post:', error)
     }
@@ -72,20 +103,47 @@ function ProfessorRatingsContent() {
     }
   }
   
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, clickable: boolean = false) => {
     return (
       <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-5 h-5 ${
-              star <= Math.round(rating)
-                ? 'fill-yellow-400 text-yellow-400'
-                : 'text-gray-300 dark:text-gray-600'
-            }`}
-          />
-        ))}
-        <span className="ml-2 text-sm font-medium text-heading">{rating.toFixed(1)}</span>
+        {[0, 1, 2, 3, 4].map((starIndex) => {
+          const starValue = starIndex + 1
+          const isFull = rating >= starValue
+          const isHalf = rating >= starValue - 0.5 && rating < starValue
+          
+          return (
+            <div key={starIndex} className="relative">
+              {clickable ? (
+                <button
+                  type="button"
+                  onClick={() => handleStarClick(starIndex)}
+                  className="focus:outline-none"
+                >
+                  <Star
+                    className={`w-8 h-8 transition-all ${
+                      isFull
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : isHalf
+                        ? 'fill-yellow-400/50 text-yellow-400'
+                        : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'
+                    }`}
+                  />
+                </button>
+              ) : (
+                <Star
+                  className={`w-5 h-5 ${
+                    isFull
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : isHalf
+                      ? 'fill-yellow-400/50 text-yellow-400'
+                      : 'text-gray-300 dark:text-gray-600'
+                  }`}
+                />
+              )}
+            </div>
+          )
+        })}
+        {!clickable && <span className="ml-2 text-sm font-medium text-heading">{rating.toFixed(1)}</span>}
       </div>
     )
   }
@@ -190,20 +248,17 @@ function ProfessorRatingsContent() {
               
               <div>
                 <label className="block text-sm font-medium text-heading mb-2">
-                  Professor Rating (0-5 stars) *
+                  Professor Rating (click stars to rate) *
                 </label>
                 <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min="0"
-                    max="5"
-                    step="0.5"
-                    value={formData.professor_rating}
-                    onChange={(e) => setFormData({ ...formData, professor_rating: parseFloat(e.target.value) })}
-                    className="flex-1"
-                  />
-                  {renderStars(formData.professor_rating)}
+                  {renderStars(formData.professor_rating, true)}
+                  {formData.professor_rating > 0 && (
+                    <span className="text-sm font-medium text-heading">{formData.professor_rating.toFixed(1)} / 5.0</span>
+                  )}
                 </div>
+                {formData.professor_rating === 0 && (
+                  <p className="text-xs text-muted mt-1">Click on a star to rate (each click = 0.5 stars)</p>
+                )}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,14 +417,14 @@ function ProfessorRatingsContent() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
+          <>
             <h3 className="text-xl font-semibold text-heading mb-2">No ratings found</h3>
             <p className="text-muted">
               {searchQuery
                 ? 'Try adjusting your search'
                 : 'Be the first to share a professor rating!'}
             </p>
-          </div>
+          </>
         )}
       </div>
     </main>

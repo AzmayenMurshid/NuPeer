@@ -186,13 +186,12 @@ function LeaderboardContent() {
                 </div>
               </div>
             ) : (
-              <div className="card card-padding text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+              <>
                 <h3 className="text-xl font-semibold text-heading mb-2">No rankings yet</h3>
                 <p className="text-muted">
                   Start helping others to earn points and climb the leaderboard!
                 </p>
-              </div>
+              </>
             )}
           </div>
 
@@ -284,13 +283,12 @@ function LeaderboardContent() {
                 </div>
               </div>
             ) : (
-              <div className="card card-padding text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+              <>
                 <h3 className="text-xl font-semibold text-heading mb-2">No teams yet</h3>
                 <p className="text-muted">
                   Battle Buddy teams will appear here once they're created.
                 </p>
-              </div>
+              </>
             )}
           </div>
         </div>

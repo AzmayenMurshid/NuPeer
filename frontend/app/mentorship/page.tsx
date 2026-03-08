@@ -472,8 +472,7 @@ function MentorshipContent() {
                   />
                 ))
               ) : (
-                <div className="col-span-2 card p-12 text-center">
-                  <Users className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                <div className="col-span-2 text-center">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No mentors found</h3>
                   <p className="text-gray-500 dark:text-gray-400 mb-4">
                     Try adjusting your search filters to find more mentors.
@@ -510,8 +509,7 @@ function MentorshipContent() {
                   />
                 ))
               ) : (
-                <div className="col-span-2 card p-12 text-center">
-                  <UserPlus className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                <div className="col-span-2 text-center">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No mentees found</h3>
                   <p className="text-gray-500 dark:text-gray-400">
                     Try adjusting your search filters to find more mentees.
