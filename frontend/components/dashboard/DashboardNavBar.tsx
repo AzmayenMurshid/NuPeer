@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Upload, HelpCircle, Users, Trophy } from 'lucide-react'
+import { Upload, HelpCircle, Users, Trophy, Star } from 'lucide-react'
 
 export function DashboardNavBar() {
   const pathname = usePathname()
@@ -22,6 +22,11 @@ export function DashboardNavBar() {
       href: '/mentorship',
       icon: Users,
       label: 'Mentorship',
+    },
+    {
+      href: '/professor-ratings',
+      icon: Star,
+      label: 'Professor Ratings',
     },
     {
       href: '/leaderboard',
