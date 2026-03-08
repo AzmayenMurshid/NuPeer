@@ -63,12 +63,26 @@ def award_points(
         raise ValueError(f"User not found: {user_id}")
     
     # Create points history entry
-    # Explicitly convert enum to its value to ensure database gets the correct string value
-    point_type_value = point_type.value if isinstance(point_type, PointType) else point_type
+    # Ensure point_type is a PointType enum instance
+    if not isinstance(point_type, PointType):
+        # If it's a string, try to convert it
+        if isinstance(point_type, str):
+            # Try to get enum by value first (e.g., 'help_provided')
+            try:
+                point_type = PointType(point_type)
+            except ValueError:
+                # If not a value, try as enum name (e.g., 'HELP_PROVIDED')
+                try:
+                    point_type = PointType[point_type]
+                except KeyError:
+                    raise ValueError(f"Invalid point type: {point_type}")
+        else:
+            raise ValueError(f"point_type must be a PointType enum or valid string, got {type(point_type)}")
+    
     points_entry = PointsHistory(
         user_id=user_id,
         points=point_value,
-        point_type=point_type_value,  # Use the enum value string, not the enum name
+        point_type=point_type,  # Pass the enum directly, TypeDecorator will handle conversion
         description=description,
         related_user_id=related_user_id,
         related_entity_id=related_entity_id,
