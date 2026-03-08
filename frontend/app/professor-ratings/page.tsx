@@ -19,19 +19,14 @@ export default function ProfessorRatingsPage() {
 function ProfessorRatingsContent() {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
-  const [courseCodeFilter, setCourseCodeFilter] = useState('')
-  const [professorNameFilter, setProfessorNameFilter] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   
-  // Use search if query exists, otherwise use filtered list
+  // Use search if query exists, otherwise get all posts
   const { data: searchResults, isLoading: isSearching } = useSearchClassPosts(searchQuery)
-  const { data: posts, isLoading: isLoadingPosts } = useClassPosts(
-    courseCodeFilter || undefined,
-    professorNameFilter || undefined
-  )
+  const { data: allPosts, isLoading: isLoadingAll } = useClassPosts()
   
-  const displayPosts = searchQuery ? searchResults : posts
-  const isLoading = searchQuery ? isSearching : isLoadingPosts
+  const displayPosts = searchQuery ? searchResults : allPosts
+  const isLoading = searchQuery ? isSearching : isLoadingAll
   
   const createPostMutation = useCreateClassPost()
   const deletePostMutation = useDeleteClassPost()
@@ -122,54 +117,17 @@ function ProfessorRatingsContent() {
           </p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Search Bar */}
         <div className="card card-padding mb-6">
-          <div className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by professor name or course code..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setCourseCodeFilter('')
-                  setProfessorNameFilter('')
-                }}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-heading focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-            
-            {/* Filters (only show when not searching) */}
-            {!searchQuery && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-heading mb-2">
-                    Course Code
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., CS 101"
-                    value={courseCodeFilter}
-                    onChange={(e) => setCourseCodeFilter(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-heading focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-heading mb-2">
-                    Professor Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Dr. Smith"
-                    value={professorNameFilter}
-                    onChange={(e) => setProfessorNameFilter(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-heading focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-            )}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by professor name or course code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-heading focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
           </div>
         </div>
 
@@ -180,14 +138,14 @@ function ProfessorRatingsContent() {
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            <span>Share a Rating</span>
+            <span>Create a Post</span>
           </button>
         </div>
 
         {/* Create Post Form */}
         {showCreateForm && (
           <div className="card card-padding mb-6">
-            <h2 className="text-xl font-semibold text-heading mb-4">Share a Professor Rating</h2>
+            <h2 className="text-xl font-semibold text-heading mb-4">Create a Post</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -404,12 +362,11 @@ function ProfessorRatingsContent() {
             ))}
           </div>
         ) : (
-          <div className="card card-padding text-center py-12">
-            <Star className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+          <div className="text-center py-12">
             <h3 className="text-xl font-semibold text-heading mb-2">No ratings found</h3>
             <p className="text-muted">
-              {searchQuery || courseCodeFilter || professorNameFilter
-                ? 'Try adjusting your search or filters'
+              {searchQuery
+                ? 'Try adjusting your search'
                 : 'Be the first to share a professor rating!'}
             </p>
           </div>
