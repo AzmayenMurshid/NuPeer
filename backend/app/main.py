@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from typing import List
-from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, mentorship, points, admin, battle_buddy, academic_teams
+from app.api.v1 import auth, transcripts, courses, help_requests, recommendations, analytics, mentorship, points, admin, battle_buddy, academic_teams, class_posts
 from app.core.config import settings
 
 # Configure logging
@@ -133,6 +133,7 @@ app.include_router(battle_buddy.router, prefix="/api/v1/admin/battle-buddy", tag
 # Public battle buddy endpoint for users to get their own team (same router, different prefix)
 app.include_router(battle_buddy.router, prefix="/api/v1/battle-buddy", tags=["Battle Buddy"])
 app.include_router(academic_teams.router, prefix="/api/v1/admin/academic-teams", tags=["Academic Teams"])
+app.include_router(class_posts.router, prefix="/api/v1/class-posts", tags=["Class Posts"])
 
 @app.on_event("startup")
 async def startup_event():

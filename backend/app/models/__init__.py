@@ -11,11 +11,12 @@ from app.models.points import PointsHistory, PointType
 from app.models.battle_buddy import BattleBuddyTeam, BattleBuddyMember
 from app.models.academic_team import AcademicTeam, AcademicTeamMember
 from app.models.tagged_member import TaggedMember
+from app.models.class_post import ClassPost
 
 __all__ = [
     "User", "Transcript", "Course", "HelpRequest", "Recommendation", 
     "AlumniProfile", "Experience", "Resume", "MentorshipRequest", "RequestStatus",
     "PointsHistory", "PointType", "BattleBuddyTeam", "BattleBuddyMember",
-    "AcademicTeam", "AcademicTeamMember", "TaggedMember"
+    "AcademicTeam", "AcademicTeamMember", "TaggedMember", "ClassPost"
 ]
 
