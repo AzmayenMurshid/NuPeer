@@ -75,18 +75,16 @@ export default function LandingPage() {
 
       {/* Content Overlay */}
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <HeroSection />
+        <HeroSection />
 
-          {/* Features - Robinhood style cards with scroll animations */}
-          <FeaturesSection />
+        {/* Features - Robinhood style cards with scroll animations */}
+        <FeaturesSection />
 
-          {/* Mentorship Program Section */}
-          <MentorshipSection />
+        {/* Mentorship Program Section */}
+        <MentorshipSection />
 
-          {/* Transcript Upload Appeal Section - Robinhood style with scroll animation */}
-          <TranscriptSection />
-        </div>
+        {/* Transcript Upload Appeal Section - Robinhood style with scroll animation */}
+        <TranscriptSection />
       </div>
     </div>
   )
@@ -212,7 +210,7 @@ function MentorshipSection() {
       }`}
     >
       <div className="card p-8 md:p-12 border-primary-500/30">
-        <div className="text-center max-w-4xl mx-auto">
+        <div className="text-center">
           <div className="flex items-center justify-center gap-3 mb-6">
             <Users className="w-12 h-12 text-primary-500" />
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
@@ -317,7 +315,7 @@ function TranscriptSection() {
       }`}
     >
       <div className="card p-8 md:p-12 border-primary-500/30">
-        <div className="text-center max-w-3xl mx-auto">
+        <div className="text-center">
           <div className="text-6xl mb-6 animate-pulse">📄</div>
           <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
             Start Your Academic Journey
