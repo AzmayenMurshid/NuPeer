@@ -67,7 +67,7 @@ export default function AdminPage() {
   const [teamPointsDescription, setTeamPointsDescription] = useState('')
   const [memberSearchQuery, setMemberSearchQuery] = useState('')
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([])
-  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string>('') // Selected team member for points
+  const [selectedTeamMemberIds, setSelectedTeamMemberIds] = useState<string[]>([]) // Selected team members for points
   
   // Academic Teams state
   const [academicTeams, setAcademicTeams] = useState<any[]>([])
@@ -89,7 +89,7 @@ export default function AdminPage() {
   // Reset form when team selection changes
   useEffect(() => {
     if (selectedTeam) {
-      setSelectedTeamMemberId('')
+      setSelectedTeamMemberIds([])
       setTeamPointsDescription('')
       setTeamPointsToAdd('')
     }
@@ -330,8 +330,8 @@ export default function AdminPage() {
     if (!selectedTeam) return
     
     // Validate user selection is required
-    if (!selectedTeamMemberId) {
-      setMessage({ type: 'error', text: 'Please select a team member' })
+    if (!selectedTeamMemberIds || selectedTeamMemberIds.length === 0) {
+      setMessage({ type: 'error', text: 'Please select at least one team member' })
       return
     }
     
@@ -352,17 +352,17 @@ export default function AdminPage() {
         team_id: selectedTeam.id,
         points: points,
         description: teamPointsDescription,
-        user_id: selectedTeamMemberId
+        user_ids: selectedTeamMemberIds
       })
       
       setMessage({ 
         type: 'success', 
-        text: `Successfully ${points > 0 ? 'added' : 'removed'} ${Math.abs(points)} points. New total: ${response.data.new_total}` 
+        text: `Successfully ${points > 0 ? 'added' : 'removed'} ${Math.abs(points)} points to ${response.data.users_awarded} member(s). New total: ${response.data.new_total}` 
       })
       
       setTeamPointsToAdd('')
       setTeamPointsDescription('')
-      setSelectedTeamMemberId('')
+      setSelectedTeamMemberIds([])
       loadTeams()
       // Update selected team
       const updatedTeams = await api.get('/admin/battle-buddy/teams')
@@ -376,6 +376,26 @@ export default function AdminPage() {
     } finally {
       setLoading(false)
     }
+  }
+  
+  const toggleTeamMemberSelection = (memberId: string) => {
+    setSelectedTeamMemberIds(prev => {
+      if (prev.includes(memberId)) {
+        return prev.filter(id => id !== memberId)
+      } else {
+        return [...prev, memberId]
+      }
+    })
+  }
+  
+  const selectAllTeamMembers = () => {
+    if (selectedTeam?.members) {
+      setSelectedTeamMemberIds(selectedTeam.members.map((m: any) => m.user_id))
+    }
+  }
+  
+  const deselectAllTeamMembers = () => {
+    setSelectedTeamMemberIds([])
   }
 
   const deleteTeam = async (teamId: string) => {
@@ -829,7 +849,7 @@ export default function AdminPage() {
                       setTeamPointsToAdd('')
                       setTeamPointsDescription('')
                       setMemberSearchQuery('')
-                      setSelectedTeamMemberId('')
+                      setSelectedTeamMemberIds([])
                       setMemberSearchResults([])
                     }}
                     className={`p-4 rounded-lg transition-colors cursor-pointer ${
@@ -975,23 +995,47 @@ export default function AdminPage() {
                     Team Points: <span className="font-semibold text-blue-600 dark:text-blue-400">{selectedTeam.points}</span>
                   </h4>
                   
-                  {/* Team Member Selection */}
+                  {/* Team Member Selection - Multiple */}
                   <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Select Team Member *
-                    </label>
-                    <select
-                      value={selectedTeamMemberId}
-                      onChange={(e) => setSelectedTeamMemberId(e.target.value)}
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">-- Select a team member --</option>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Select Team Members * ({selectedTeamMemberIds.length} selected)
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={selectAllTeamMembers}
+                          className="text-xs px-2 py-1 text-primary-600 dark:text-primary-400 hover:underline"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={deselectAllTeamMembers}
+                          className="text-xs px-2 py-1 text-gray-600 dark:text-gray-400 hover:underline"
+                        >
+                          Deselect All
+                        </button>
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-lg p-2 bg-white dark:bg-gray-800">
                       {selectedTeam.members?.map((member: any) => (
-                        <option key={member.user_id} value={member.user_id}>
-                          {member.first_name} {member.last_name} ({member.email})
-                        </option>
+                        <label
+                          key={member.user_id}
+                          className="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamMemberIds.includes(member.user_id)}
+                            onChange={() => toggleTeamMemberSelection(member.user_id)}
+                            className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          />
+                          <span className="text-sm text-gray-900 dark:text-white">
+                            {member.first_name} {member.last_name} <span className="text-gray-500 dark:text-gray-400">({member.email})</span>
+                          </span>
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </div>
 
                   {/* Points Input */}
@@ -1044,7 +1088,7 @@ export default function AdminPage() {
 
                   <button
                     onClick={updateTeamPoints}
-                    disabled={loading || !teamPointsToAdd || parseInt(teamPointsToAdd) === 0 || !teamPointsDescription.trim() || !selectedTeamMemberId}
+                    disabled={loading || !teamPointsToAdd || parseInt(teamPointsToAdd) === 0 || !teamPointsDescription.trim() || selectedTeamMemberIds.length === 0}
                     className="w-full px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Updating...' : 'Update Team Points'}

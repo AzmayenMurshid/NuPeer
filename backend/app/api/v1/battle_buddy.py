@@ -66,7 +66,7 @@ class UpdateTeamPointsRequest(BaseModel):
     team_id: str
     points: int
     description: str
-    user_id: str  # User ID to award points to
+    user_ids: List[str]  # List of user IDs to award points to
 
 
 @router.get("/teams", response_model=List[BattleBuddyTeamResponse])
@@ -512,15 +512,22 @@ async def update_team_points(
     db: Session = Depends(get_db)
 ):
     """
-    Update team points - awards points to a user and their team.
+    Update team points - awards points to multiple users and their team.
     """
+    # Validate input
+    if not request.user_ids or len(request.user_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one user must be selected"
+        )
+    
     try:
         team_id = uuid.UUID(request.team_id)
-        user_id = uuid.UUID(request.user_id)
+        user_ids = [uuid.UUID(uid) for uid in request.user_ids]
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid team_id or user_id format"
+            detail="Invalid team_id or user_ids format"
         )
     
     # Check if team exists
@@ -531,29 +538,33 @@ async def update_team_points(
             detail="Team not found"
         )
     
-    # Verify that the user belongs to this team
-    team_member = db.query(BattleBuddyMember).filter(
+    # Verify that all users belong to this team
+    team_members = db.query(BattleBuddyMember).filter(
         BattleBuddyMember.team_id == team_id,
-        BattleBuddyMember.user_id == user_id
-    ).first()
+        BattleBuddyMember.user_id.in_(user_ids)
+    ).all()
     
-    if not team_member:
+    if len(team_members) != len(user_ids):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User must belong to the specified team"
+            detail="All selected users must belong to the specified team"
         )
     
-    # Award points to the user
+    # Award points to all selected users
     try:
-        points_entry = award_points(
-            db=db,
-            user_id=user_id,
-            point_type=PointType.HELP_PROVIDED,
-            description=request.description,
-            points=request.points
-        )
+        points_entries = []
+        for user_id in user_ids:
+            points_entry = award_points(
+                db=db,
+                user_id=user_id,
+                point_type=PointType.HELP_PROVIDED,
+                description=request.description,
+                points=request.points
+            )
+            points_entries.append(points_entry)
         
-        # Award team points directly
+        # Award team points (only once, regardless of how many users)
+        # Team points are awarded per transaction, not per user
         team.points = (team.points or 0) + request.points
         db.commit()
         
@@ -566,7 +577,8 @@ async def update_team_points(
             "team_name": team.team_name,
             "points_added": request.points,
             "new_total": team.points or 0,
-            "description": request.description
+            "description": request.description,
+            "users_awarded": len(user_ids)
         }
     except ValueError as e:
         raise HTTPException(
