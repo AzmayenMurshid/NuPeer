@@ -4,9 +4,7 @@ Points Service - Handles awarding and managing points
 from sqlalchemy.orm import Session
 from app.models.points import PointsHistory, PointType
 from app.models.user import User
-from app.models.tagged_member import TaggedMember
-from app.models.battle_buddy import BattleBuddyMember, BattleBuddyTeam
-from typing import Optional, List
+from typing import Optional
 import uuid
 
 
@@ -32,8 +30,7 @@ def award_points(
     related_user_id: Optional[uuid.UUID] = None,
     related_entity_id: Optional[uuid.UUID] = None,
     related_entity_type: Optional[str] = None,
-    points: Optional[int] = None,
-    tagged_member_ids: Optional[List[uuid.UUID]] = None
+    points: Optional[int] = None
 ) -> PointsHistory:
     """
     Award points to a user for an activity
@@ -93,42 +90,6 @@ def award_points(
     user.points = (user.points or 0) + point_value
     
     db.add(points_entry)
-    db.flush()  # Flush to get the points_entry.id
-    
-    # Handle tagged members - award team points ONLY if tagged members exist
-    # Team points can only be added if a user from the team is tagged
-    if tagged_member_ids and len(tagged_member_ids) > 0:
-        # Get the user's team
-        user_team_member = db.query(BattleBuddyMember).filter(
-            BattleBuddyMember.user_id == user_id
-        ).first()
-        
-        if user_team_member:
-            user_team = db.query(BattleBuddyTeam).filter(
-                BattleBuddyTeam.id == user_team_member.team_id
-            ).first()
-            
-            if user_team:
-                # Verify tagged members are in the same team
-                valid_tagged_members = db.query(BattleBuddyMember).filter(
-                    BattleBuddyMember.user_id.in_(tagged_member_ids),
-                    BattleBuddyMember.team_id == user_team.id
-                ).all()
-                
-                # Only award team points if there are valid tagged members from the same team
-                if valid_tagged_members:
-                    # Create tagged member entries
-                    for tagged_member in valid_tagged_members:
-                        tagged_entry = TaggedMember(
-                            points_history_id=points_entry.id,
-                            user_id=tagged_member.user_id
-                        )
-                        db.add(tagged_entry)
-                    
-                    # Award team points (same amount as individual points)
-                    # This is the ONLY way team points can be added - when team members are tagged
-                    user_team.points = (user_team.points or 0) + point_value
-    
     db.commit()
     db.refresh(points_entry)
     

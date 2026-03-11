@@ -113,7 +113,6 @@ async def update_user_points(
     current_points = target_user.points or 0
     
     # Use award_points service function for proper point incrementation
-    # Pass points=None to use custom point value, and no tagged_member_ids to avoid team point logic
     try:
         points_entry = award_points(
             db=db,
@@ -122,8 +121,7 @@ async def update_user_points(
             description=request.description or f"Admin adjustment by {admin_user.email}",
             related_user_id=admin_user.id,
             related_entity_type="admin_adjustment",
-            points=request.points,  # Custom point value
-            tagged_member_ids=None  # No tagged members for admin adjustments
+            points=request.points  # Custom point value
         )
     except ValueError as e:
         raise HTTPException(
