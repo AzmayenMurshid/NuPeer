@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.api.v1.auth import get_current_user
 from app.models.user import User
 from app.models.battle_buddy import BattleBuddyTeam, BattleBuddyMember
-from app.models.points import PointType
+from app.models.points import PointType, PointsHistory
 from app.services.points_service import award_points
 
 router = APIRouter()
@@ -550,22 +550,47 @@ async def update_team_points(
             detail="All selected users must belong to the specified team"
         )
     
-    # Award points to all selected users
+    # Award points to all selected users - Optimized to O(n) with single commit
     try:
+        # Validate point value
+        if request.points == 0:
+            raise ValueError("Points must be positive (to award) or negative (to remove).")
+        
+        # Fetch all users in a single query - O(1) database operation
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        
+        if len(users) != len(user_ids):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="One or more users not found"
+            )
+        
+        # Prepare point type enum value
+        point_type_value = PointType.HELP_PROVIDED.value
+        
+        # Create all PointsHistory entries and update user points in memory - O(n) operations
         points_entries = []
-        for user_id in user_ids:
-            points_entry = award_points(
-                db=db,
-                user_id=user_id,
-                point_type=PointType.HELP_PROVIDED,
+        for user in users:
+            # Create points history entry
+            points_entry = PointsHistory(
+                user_id=user.id,
+                points=request.points,
+                point_type=point_type_value,
                 description=request.description,
-                points=request.points
+                related_user_id=None,
+                related_entity_id=None,
+                related_entity_type=None,
             )
             points_entries.append(points_entry)
+            db.add(points_entry)
+            
+            # Update user's total points in memory
+            user.points = (user.points or 0) + request.points
         
         # Award team points (only once, regardless of how many users)
-        # Team points are awarded per transaction, not per user
         team.points = (team.points or 0) + request.points
+        
+        # Single commit for all operations - O(1) database operation
         db.commit()
         
         # Refresh team to get updated points
@@ -581,7 +606,14 @@ async def update_team_points(
             "users_awarded": len(user_ids)
         }
     except ValueError as e:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update team points: {str(e)}"
         )
