@@ -24,12 +24,40 @@ class PointType(str, enum.Enum):
 
 
 class PointTypeEnum(TypeDecorator):
-    """TypeDecorator to ensure enum values (not names) are stored in database"""
+    """
+    TypeDecorator to ensure enum values (not names) are stored in database.
+    
+    IMPORTANT NOTE ON native_enum=True:
+    When using native_enum=True with PostgreSQL, SQLAlchemy may serialize enum instances
+    as their names (e.g., 'HELP_PROVIDED') instead of their values (e.g., 'help_provided').
+    This TypeDecorator handles conversion, but for maximum reliability, the award_points
+    function explicitly extracts enum values before passing them to SQLAlchemy.
+    
+    This decorator provides a fallback conversion layer for cases where enum instances
+    or string names might be passed directly.
+    """
     impl = SQLEnum(PointType, name='pointtype', native_enum=True)
     cache_ok = True
     
     def process_bind_param(self, value, dialect):
-        """Convert enum to its value for database storage"""
+        """
+        Convert enum to its value for database storage.
+        
+        Handles three cases:
+        1. PointType enum instance -> extracts .value (e.g., 'help_provided')
+        2. String value (already correct) -> returns as-is (e.g., 'help_provided')
+        3. String name (enum name) -> converts to value (e.g., 'HELP_PROVIDED' -> 'help_provided')
+        
+        Args:
+            value: PointType enum instance, enum value string, or enum name string
+            dialect: SQLAlchemy dialect (unused)
+            
+        Returns:
+            String value that matches the PostgreSQL enum (e.g., 'help_provided')
+            
+        Raises:
+            ValueError: If value cannot be converted to a valid enum value
+        """
         if value is None:
             return None
         if isinstance(value, PointType):
