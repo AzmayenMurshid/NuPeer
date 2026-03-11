@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useLeaderboard, usePoints } from '@/lib/hooks/usePoints'
 import { useAuth } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { Trophy, Medal, Award, TrendingUp, Users } from 'lucide-react'
+import { Trophy, Medal, Award, TrendingUp, Users, BookOpen, ClipboardCheck, GraduationCap, Clock, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { api } from '@/lib/api'
@@ -299,35 +299,43 @@ function LeaderboardContent() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-5 h-5 text-primary-500" />
-                <span className="font-medium text-heading">Accept Mentorship</span>
-                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+100</span>
+                <BookOpen className="w-5 h-5 text-primary-500" />
+                <span className="font-medium text-heading">Personal Study Sessions</span>
+                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+Points</span>
               </div>
-              <p className="text-sm text-muted">Accept a mentorship request from a mentee</p>
+              <p className="text-sm text-muted">Attend and participate in personal study sessions</p>
             </div>
             <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-5 h-5 text-primary-500" />
-                <span className="font-medium text-heading">Help with Course</span>
-                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+50</span>
+                <ClipboardCheck className="w-5 h-5 text-primary-500" />
+                <span className="font-medium text-heading">Grade Checks</span>
+                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+Points</span>
               </div>
-              <p className="text-sm text-muted">Help a brother with a course they're struggling with</p>
+              <p className="text-sm text-muted">Complete grade checks and maintain academic performance</p>
             </div>
             <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Award className="w-5 h-5 text-primary-500" />
-                <span className="font-medium text-heading">Complete Profile</span>
-                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+50</span>
+                <GraduationCap className="w-5 h-5 text-primary-500" />
+                <span className="font-medium text-heading">Tutoring Other Brothers</span>
+                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+Points</span>
               </div>
-              <p className="text-sm text-muted">Complete your alumni profile with all required fields</p>
+              <p className="text-sm text-muted">Help tutor and support other brothers in their studies</p>
             </div>
             <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Medal className="w-5 h-5 text-primary-500" />
-                <span className="font-medium text-heading">Upload Resume</span>
-                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+25</span>
+                <Clock className="w-5 h-5 text-primary-500" />
+                <span className="font-medium text-heading">Office Hours</span>
+                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+Points</span>
               </div>
-              <p className="text-sm text-muted">Upload your resume to your profile</p>
+              <p className="text-sm text-muted">Attend professor office hours and academic support sessions</p>
+            </div>
+            <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-5 h-5 text-primary-500" />
+                <span className="font-medium text-heading">Weekly No Absences</span>
+                <span className="ml-auto text-primary-600 dark:text-primary-400 font-semibold">+Points</span>
+              </div>
+              <p className="text-sm text-muted">Maintain perfect attendance with no absences for the week</p>
             </div>
           </div>
         </div>
