@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'convert_pointtype_to_string'
-down_revision = 'add_daily_login_enum'
+down_revision = 'create_class_posts_table'  # Changed to merge with create_class_posts_table branch
 branch_labels = None
 depends_on = None
 
