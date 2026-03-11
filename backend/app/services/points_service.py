@@ -60,14 +60,9 @@ def award_points(
         raise ValueError(f"User not found: {user_id}")
     
     # Create points history entry
-    # Ensure point_type is a PointType enum instance and extract its value
-    # 
-    # IMPORTANT: When using native_enum=True with PostgreSQL, SQLAlchemy may serialize
-    # the enum name (e.g., 'HELP_PROVIDED') instead of the value (e.g., 'help_provided').
-    # To prevent this, we explicitly extract the enum value before passing it to SQLAlchemy.
-    # This ensures the database always receives the correct lowercase value string.
+    # Ensure point_type is a PointType enum instance (TypeDecorator handles conversion to string)
     if not isinstance(point_type, PointType):
-        # If it's a string, try to convert it
+        # If it's a string, try to convert it to enum
         if isinstance(point_type, str):
             # Try to get enum by value first (e.g., 'help_provided')
             try:
@@ -81,15 +76,11 @@ def award_points(
         else:
             raise ValueError(f"point_type must be a PointType enum or valid string, got {type(point_type)}")
     
-    # Explicitly extract the enum value to ensure database compatibility
-    # This prevents SQLAlchemy from serializing the enum name instead of the value
-    # when using native_enum=True with PostgreSQL
-    point_type_value = point_type.value
-    
+    # TypeDecorator will automatically convert enum to string value for database storage
     points_entry = PointsHistory(
         user_id=user_id,
         points=point_value,
-        point_type=point_type_value,  # Pass the enum value string explicitly
+        point_type=point_type,  # Pass enum directly - TypeDecorator handles conversion
         description=description,
         related_user_id=related_user_id,
         related_entity_id=related_entity_id,

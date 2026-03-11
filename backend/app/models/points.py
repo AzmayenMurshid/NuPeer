@@ -1,7 +1,7 @@
 """
 Points System Models
 """
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, Enum as SQLEnum, TypeDecorator
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -25,27 +25,28 @@ class PointType(str, enum.Enum):
 
 class PointTypeEnum(TypeDecorator):
     """
-    TypeDecorator to ensure enum values (not names) are stored in database.
+    TypeDecorator that stores PointType enum values as strings in the database.
     
-    IMPORTANT NOTE ON native_enum=True:
-    When using native_enum=True with PostgreSQL, SQLAlchemy may serialize enum instances
-    as their names (e.g., 'HELP_PROVIDED') instead of their values (e.g., 'help_provided').
-    This TypeDecorator handles conversion, but for maximum reliability, the award_points
-    function explicitly extracts enum values before passing them to SQLAlchemy.
+    This approach avoids PostgreSQL native enum serialization issues by using
+    a simple String column with validation. The enum is still used in Python
+    for type safety, but stored as plain strings in the database.
     
-    This decorator provides a fallback conversion layer for cases where enum instances
-    or string names might be passed directly.
+    Benefits:
+    - No native enum serialization issues
+    - Simpler and more reliable
+    - Easier to migrate and modify
+    - Still provides type safety in Python code
     """
-    impl = SQLEnum(PointType, name='pointtype', native_enum=True)
+    impl = String(50)  # Use String column instead of native enum
     cache_ok = True
     
     def process_bind_param(self, value, dialect):
         """
-        Convert enum to its value for database storage.
+        Convert enum to its string value for database storage.
         
         Handles three cases:
         1. PointType enum instance -> extracts .value (e.g., 'help_provided')
-        2. String value (already correct) -> returns as-is (e.g., 'help_provided')
+        2. String value (already correct) -> validates and returns (e.g., 'help_provided')
         3. String name (enum name) -> converts to value (e.g., 'HELP_PROVIDED' -> 'help_provided')
         
         Args:
@@ -53,39 +54,55 @@ class PointTypeEnum(TypeDecorator):
             dialect: SQLAlchemy dialect (unused)
             
         Returns:
-            String value that matches the PostgreSQL enum (e.g., 'help_provided')
+            String value (e.g., 'help_provided')
             
         Raises:
             ValueError: If value cannot be converted to a valid enum value
         """
         if value is None:
             return None
+        
+        # If it's already a PointType enum, extract the value
         if isinstance(value, PointType):
-            return value.value  # Return the string value, not the enum name
+            return value.value
+        
+        # If it's a string, validate and convert if needed
         if isinstance(value, str):
-            # If it's already a string value (like 'help_provided'), return as-is
-            # If it's the enum name (like 'HELP_PROVIDED'), convert to value
+            # Try to get enum by value first (case-sensitive)
             try:
-                # Try to get enum by value first (case-sensitive)
                 enum_instance = PointType(value)
-                return enum_instance.value  # Return the value explicitly
+                return enum_instance.value  # Return the validated value
             except ValueError:
                 # If not a value, try as enum name
                 try:
                     return PointType[value].value
                 except (KeyError, AttributeError):
-                    # If still not found, raise an error rather than returning invalid value
                     raise ValueError(f"Invalid point type: {value}. Must be a valid PointType enum value or name.")
-        return value
+        
+        # For any other type, try to convert to string and validate
+        try:
+            return PointType(str(value)).value
+        except (ValueError, KeyError):
+            raise ValueError(f"Invalid point type: {value}. Must be a valid PointType enum value or name.")
     
     def process_result_value(self, value, dialect):
-        """Convert database value back to enum"""
+        """
+        Convert database string value back to PointType enum.
+        
+        Args:
+            value: String value from database (e.g., 'help_provided')
+            dialect: SQLAlchemy dialect (unused)
+            
+        Returns:
+            PointType enum instance or None
+        """
         if value is None:
             return None
         if isinstance(value, str):
             try:
                 return PointType(value)
             except ValueError:
+                # If invalid value in database, return as string (shouldn't happen with validation)
                 return value
         return value
 

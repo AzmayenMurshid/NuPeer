@@ -21,40 +21,96 @@ This occurred because:
 
 ## Solution
 
+### New Approach: String Column with Validation
+
+Instead of using PostgreSQL native enums, we've switched to a **String column with CHECK constraint**. This approach:
+
+- ✅ **Eliminates serialization issues** - No native enum conversion problems
+- ✅ **Maintains type safety** - Python enum still used for validation
+- ✅ **Simpler and more reliable** - Plain string storage with validation
+- ✅ **Easier to maintain** - No enum type migration complexity
+
 ### Implementation
 
-The fix was implemented in two places:
+#### 1. `backend/app/models/points.py`
 
-#### 1. `backend/app/services/points_service.py`
-
-The `award_points()` function now explicitly extracts the enum value before passing it to SQLAlchemy:
+Changed `PointTypeEnum` TypeDecorator to use `String(50)` instead of `SQLEnum` with `native_enum=True`:
 
 ```python
-# Explicitly extract the enum value to ensure database compatibility
-point_type_value = point_type.value
+class PointTypeEnum(TypeDecorator):
+    """
+    TypeDecorator that stores PointType enum values as strings in the database.
+    Avoids PostgreSQL native enum serialization issues.
+    """
+    impl = String(50)  # Use String column instead of native enum
+    
+    def process_bind_param(self, value, dialect):
+        # Converts enum instances to their string values
+        if isinstance(value, PointType):
+            return value.value
+        # ... handles string conversion and validation
+```
 
+The TypeDecorator automatically:
+- Converts enum instances to string values
+- Validates string inputs
+- Converts enum names to values if needed
+
+#### 2. `backend/app/services/points_service.py`
+
+Simplified the code - enum instances can be passed directly:
+
+```python
 points_entry = PointsHistory(
     ...
-    point_type=point_type_value,  # Pass the enum value string explicitly
+    point_type=point_type,  # Pass enum directly - TypeDecorator handles conversion
     ...
 )
 ```
 
-This ensures the database always receives the correct lowercase value string (`'help_provided'`) instead of the enum name (`'HELP_PROVIDED'`).
+No need for explicit value extraction - the TypeDecorator handles it automatically.
 
-#### 2. `backend/app/models/points.py`
+#### 3. Database Migration
 
-The `PointTypeEnum` TypeDecorator provides a fallback conversion layer that handles:
-- PointType enum instances → extracts `.value`
-- String values (already correct) → returns as-is
-- String names (enum names) → converts to value
+Created migration `convert_pointtype_to_string.py` that:
+- Converts the enum column to VARCHAR(50)
+- Adds CHECK constraint for validation
+- Drops the PostgreSQL enum type (if not used elsewhere)
 
-This provides defense-in-depth in case enum instances are passed directly elsewhere in the codebase.
+This ensures existing data is preserved and new data is validated.
 
-### Why Both Layers?
+## Migration Steps
 
-1. **Primary Fix (points_service.py)**: Explicitly extracts values at the source, preventing the issue from occurring
-2. **Fallback (TypeDecorator)**: Provides safety net for any code paths that might pass enum instances directly
+To apply this fix to an existing database:
+
+1. **Run the migration**:
+   ```bash
+   alembic upgrade head
+   ```
+
+2. **Verify the conversion**:
+   ```sql
+   -- Check column type changed to VARCHAR
+   SELECT column_name, data_type 
+   FROM information_schema.columns 
+   WHERE table_name = 'points_history' AND column_name = 'point_type';
+   
+   -- Verify CHECK constraint exists
+   SELECT constraint_name, check_clause 
+   FROM information_schema.check_constraints 
+   WHERE constraint_name = 'check_point_type_valid';
+   ```
+
+3. **Test point awarding**:
+   ```python
+   award_points(db, user_id, PointType.HELP_PROVIDED, description="Test")
+   ```
+
+4. **Verify data integrity**:
+   ```sql
+   SELECT point_type FROM points_history ORDER BY created_at DESC LIMIT 1;
+   ```
+   Should return: `help_provided`
 
 ## Testing
 
@@ -69,22 +125,38 @@ To verify the fix works:
    ```sql
    SELECT point_type FROM points_history ORDER BY created_at DESC LIMIT 1;
    ```
-   Should return: `help_provided` (not `HELP_PROVIDED`)
+   Should return: `help_provided` (stored as VARCHAR, not enum)
+
+3. Test invalid values are rejected:
+   ```python
+   # This should raise ValueError
+   award_points(db, user_id, "INVALID_TYPE", description="Test")
+   ```
 
 ## Related Files
 
-- `backend/app/services/points_service.py` - Main fix implementation
-- `backend/app/models/points.py` - TypeDecorator fallback
-- `backend/alembic/versions/create_points_system.py` - Enum definition migration
+- `backend/app/services/points_service.py` - Point awarding logic
+- `backend/app/models/points.py` - PointTypeEnum TypeDecorator
+- `backend/alembic/versions/convert_pointtype_to_string.py` - Migration to convert enum to string
+- `backend/alembic/versions/create_points_system.py` - Original enum definition migration
+
+## Benefits of This Approach
+
+1. **No Serialization Issues**: String columns don't have enum name/value conversion problems
+2. **Type Safety**: Python enum still provides compile-time type checking
+3. **Database Validation**: CHECK constraint ensures data integrity at database level
+4. **Easier Maintenance**: Adding new point types only requires updating Python enum and CHECK constraint
+5. **Portability**: Works consistently across different database backends
 
 ## Prevention
 
-When working with PostgreSQL enums in SQLAlchemy:
+When working with enums in SQLAlchemy:
 
-1. **Always extract enum values explicitly** before passing to SQLAlchemy when using `native_enum=True`
-2. **Use TypeDecorator** as a fallback conversion layer
-3. **Test enum serialization** to ensure values (not names) are stored
-4. **Document enum value requirements** in code comments
+1. **Consider String columns** instead of native enums for better reliability
+2. **Use TypeDecorator** to handle enum-to-string conversion automatically
+3. **Add CHECK constraints** for database-level validation
+4. **Test enum conversion** to ensure values are stored correctly
+5. **Document the approach** so future developers understand the design decision
 
 ## References
 
