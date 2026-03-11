@@ -51,8 +51,9 @@ def award_points(
     # Get point value
     point_value = points if points is not None else POINT_VALUES.get(point_type, 0)
     
-    if point_value <= 0:
-        raise ValueError(f"Invalid point value: {point_value}")
+    # Allow positive (award) and negative (remove) values, but not zero
+    if point_value == 0:
+        raise ValueError(f"Invalid point value: {point_value}. Points must be positive (to award) or negative (to remove).")
     
     # Get user and update points
     user = db.query(User).filter(User.id == user_id).first()
