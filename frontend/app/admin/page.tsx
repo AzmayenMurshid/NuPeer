@@ -615,30 +615,28 @@ export default function AdminPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-white dark:bg-black content-with-nav">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Admin Panel</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage NuPeer points for users</p>
-          </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Admin Panel</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage NuPeer points for users</p>
+      </div>
 
-          {message && (
-            <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-              message.type === 'success' 
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200' 
-                : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-            }`}>
-              {message.type === 'success' ? (
-                <CheckCircle2 className="w-5 h-5" />
-              ) : (
-                <AlertCircle className="w-5 h-5" />
-              )}
-              <span>{message.text}</span>
-            </div>
+      {message && (
+        <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200' 
+            : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+        }`}>
+          {message.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5" />
+          ) : (
+            <AlertCircle className="w-5 h-5" />
           )}
+          <span>{message.text}</span>
+        </div>
+      )}
 
-          {/* User Search */}
-          <div className="card p-6 mb-6">
+      {/* User Search */}
+      <div className="card p-6 mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Search Users</h2>
             <div className="flex gap-3">
               <div className="flex-1 relative">
@@ -702,8 +700,8 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Update Points */}
-          {selectedUser && (
+      {/* Update Points */}
+      {selectedUser && (
             <div className="card p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 Update Points for {selectedUser.first_name} {selectedUser.last_name}
@@ -772,8 +770,8 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Battle Buddy Teams Section */}
-          <div className="card p-6 mt-6">
+      {/* Battle Buddy Teams Section */}
+      <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1098,8 +1096,8 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Academic Teams Section */}
-          <div className="card p-6 mt-6">
+      {/* Academic Teams Section */}
+      <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -1311,8 +1309,8 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Password Change Section */}
-          <div className="card p-6 mt-6">
+      {/* Password Change Section */}
+      <div className="card p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Change Admin Password</h2>
@@ -1389,8 +1387,6 @@ export default function AdminPage() {
               </form>
             )}
           </div>
-        </div>
-      </div>
     </ProtectedRoute>
   )
 }
